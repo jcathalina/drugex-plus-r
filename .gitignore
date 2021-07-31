@@ -14,4 +14,4 @@ __pycache__/
 .mypy_cache
 
 # Raw data
-data/raw/*
+data/raw/chembl_26.sdf.gz
