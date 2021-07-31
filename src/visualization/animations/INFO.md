@@ -1,0 +1,1 @@
+# Contains eventual animations for elaborate explanations using manim / chanim

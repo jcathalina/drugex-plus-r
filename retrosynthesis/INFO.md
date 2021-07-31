@@ -1,0 +1,2 @@
+# Retrosynthesis directory
+Directory for the inclusion of all retrosynthesis related functionality. The configuration scripts for e.g. AizynthFinder go in here. RAScore and Retro* will probably be included in here as well.
