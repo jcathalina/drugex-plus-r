@@ -43,3 +43,7 @@ def main() -> None:
         sys.exit(1)
     
     print("Files have been successfully downloaded.")
+
+
+if __name__ == "__main__":
+    main()
