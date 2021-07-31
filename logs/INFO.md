@@ -1,0 +1,1 @@
+Where all log files should end up and log configuration
