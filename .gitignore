@@ -1,0 +1,11 @@
+# Cache
+__pycache__/
+
+# Jupyter
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/

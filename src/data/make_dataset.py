@@ -1,0 +1,17 @@
+import os
+import pandas as pd
+import gzip
+import requests
+
+from rdkit import Chem
+from rdkit import rdBase
+
+
+from tqdm import tqdm
+
+
+def main():
+    pass
+
+if __name__ == "__main__":
+    main()
