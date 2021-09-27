@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "drugex-plus-r"
-version = "0.1.0"
+version = "1.0.0"
 description = "A simplified version of DrugEx by Xuhan Liu to facilitate incorporation of retrosynthesis engines in de novo drug design"
 authors = ["naisuu <julius.cathalina@gmail.com>"]
 license = "MIT"

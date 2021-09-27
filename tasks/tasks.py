@@ -8,7 +8,8 @@ def clean(c):
     """
     c.run("rm -rf docs/_build")
 
-@task(pre=[clean]) # clean is run as a pre-task to build, as we always want this to happen first.
+
+@task(pre=[clean])  # clean is run as a pre-task to build, as we always want this to happen first.
 def build(c):
     """
     Automatically build the documentation for DrugEx MINUS.
