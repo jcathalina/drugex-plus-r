@@ -1,5 +1,7 @@
 # 1. Decisions made
 
+Date: 27/09/2021
+
 Start Master's thesis project: Modify existing de novo molecular generator (DrugEx v2) to potentially improve the
 synthetic feasibility of generated structures.
 For extensive explanation and background on the motivation for this thesis, please refer to the [thesis proposal document](
