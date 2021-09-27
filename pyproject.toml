@@ -13,8 +13,8 @@ matplotlib = "^3.4.2"
 pandas = "^1.0.0"
 tqdm = "^4.62.0"
 scikit-learn = "^0.24.2"
-torch = {version = "^1.9.0", python = "^3.7", platform = "linux"}
 requests = "^2.26.0"
+torch = "^1.9.1"
 
 [tool.poetry.dev-dependencies]
 black = "^21.7b0"
