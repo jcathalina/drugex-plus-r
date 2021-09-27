@@ -1,17 +1,25 @@
 # 1. Decisions made
 
+Start Master's thesis project: Modify existing de novo molecular generator (DrugEx v2) to potentially improve the
+synthetic feasibility of generated structures.
+For extensive explanation and background on the motivation for this thesis, please refer to the [thesis proposal document](
+references/DUMP_VER_MSC_THESIS_PROPOSAL_JEJ_CATHALINA.pdf
+).
+
 ## Status
 
-Doing
+Ongoing
 
 ## Context
 
-We...
+To clearly define the scope of this project and ensure its timely delivery, a proposal has been written and submitted
+to all involved (Mike, Gerard, Anthe, Alan). After review and acceptance, we shall define tasks that are necessary
+to validate and verify the results found during experimentation.
 
 ## Justification (optional)
 
-To...
+None
 
 ## Consequences (if applicable)
 
-This...
+None
