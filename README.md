@@ -6,5 +6,23 @@
 DrugEx+R was created for the purpose of experimenting with the development and implementation of retrosynthesis engines within molecular generators for the goal of de novo drug design; the focus of [my Master's thesis](TODO).
 The code in this repository is based on [DrugEx v2](https://github.com/XuhanLiu/DrugEx), released by Xuhan Liu (First Author) and Gerard J.P. van Westen (Correspondent Author) on March 8th, 2021. The same license terms apply for this repository, and can be found in the LICENSE file.
 
+## Getting started
+After cloning this repository, make sure you have a conda distribution installed. We recommend [miniforge](https://github.com/conda-forge/miniforge) for licensing reasons, but anaconda/miniconda will work as well.
+If you have `invoke` installed in your base conda environment (you can install it by running `conda install -c conda-forge invoke`), you will have access to some convenient commands from the base environment, which can be used for e.g. a quick start, or the other commands listed below
+
+### Quick start
+- `invoke env.init`
+
+### Manual start
+- `conda env create -n dpr -f env.yml`
+- `conda activate dpr`
+- `conda poetry install`
+
+### Invoke commands
+- `invoke env.init`: Build the environment necessary to develop for DrugEx+R
+- `invoke lab`: Start a jupyter lab instance using the correct environment
+- `invoke docs`: Rebuild the Sphinx automatic documentation files
+
+
 # Additional information
 The paper that accompanies the original DrugEx v2 code can be found [here](https://chemrxiv.org/engage/chemrxiv/article-details/60c75834469df47f67f455b9).
