@@ -4,7 +4,7 @@ from . import config
 
 
 @task(default=True)
-def lab(ctx, env_name=config.env_name, port=None):
+def init(ctx, env_name=config.env_name, port=None):
     """
     Initiates jupyter lab in this project using
     the given environment and port

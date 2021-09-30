@@ -1,6 +1,6 @@
 from invoke import Collection
 
-from . import env, config, jupyter
+from . import env, config, lab
 
-ns = Collection(env, jupyter)
+ns = Collection(env, lab)
 ns.configure({"run": {"shell": config.shell, "pty": config.pty}})
