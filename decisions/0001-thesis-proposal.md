@@ -5,7 +5,7 @@ Date: 27/09/2021
 Start Master's thesis project: Modify existing de novo molecular generator (DrugEx v2) to potentially improve the
 synthetic feasibility of generated structures.
 For extensive explanation and background on the motivation for this thesis, please refer to the [thesis proposal document](
-references/MSC_THESIS_PROPOSAL_JEJ_CATHALINA_28092021.pdf
+../references/MSC_THESIS_PROPOSAL_JEJ_CATHALINA_28092021.pdf
 ).
 
 Update 1/10/2021: Replaced raw thesis proposal with the refined proposal document.
