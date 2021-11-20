@@ -1,0 +1,19 @@
+name: drugexr
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7
+  - pip
+  - rdkit
+  - tqdm
+  - pytorch
+  - cudatoolkit=11.3
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - numpy
+  - pandas
+  - pip:
+    - git+https://github.com/reymond-group/RAscore.git@master
+    - pyprojroot
