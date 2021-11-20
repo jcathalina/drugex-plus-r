@@ -15,3 +15,6 @@ __pycache__/
 
 # Raw data
 data/raw/chembl_26.sdf.gz
+
+# local editable install
+*.egg-info

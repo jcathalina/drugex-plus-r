@@ -33,6 +33,7 @@ setup(
     license=about.__license__,
     download_url="https://github.com/naisuu/drugex-plus-r",
     python_requires=">=3.7",
+    platforms=["Linux"],
     keywords=[
         "deep learning",
         "reinforcement learning",

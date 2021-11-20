@@ -11,7 +11,7 @@ After cloning this repository, make sure you have a conda distribution installed
 
 ### Installing the environment
 - `conda env create -f environment.yml` or `conda env create -f environment-dev.yml` (for Developers)
-- `conda activate dpr`
+- `conda activate drugexr`
 
 # Additional information
 The paper that accompanies the original DrugEx v2 code can be found [here](https://chemrxiv.org/engage/chemrxiv/article-details/60c75834469df47f67f455b9).
