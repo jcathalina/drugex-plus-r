@@ -15,8 +15,9 @@ dependencies:
   - scikit-learn
   - numpy
   - pandas
-  - dvc
+  - click
   # DEV ONLY
+  - dvc
   - jupyter
   - black
   - pytest

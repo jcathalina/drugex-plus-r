@@ -14,7 +14,10 @@ __pycache__/
 .mypy_cache
 
 # Raw data
-data/raw/chembl_26.sdf.gz
+data/raw/*.sdf.gz
 
 # local editable install
 *.egg-info
+
+# Pytest cache
+.pytest_cache

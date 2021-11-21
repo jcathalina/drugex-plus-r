@@ -6,7 +6,7 @@
 import os
 from importlib.util import module_from_spec, spec_from_file_location
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 _PATH_ROOT = os.path.dirname(__file__)
 
@@ -34,6 +34,13 @@ setup(
     download_url="https://github.com/naisuu/drugex-plus-r",
     python_requires=">=3.7",
     platforms=["Linux"],
+    packages=find_packages(),
+    install_requires=["Click"],
+    entry_points={
+        "console_scripts": [
+            "download_raw_chembl=drugexr.tools.download_raw_chembl:download_chembl_data",
+        ],
+    },
     keywords=[
         "deep learning",
         "reinforcement learning",

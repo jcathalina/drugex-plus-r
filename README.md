@@ -13,5 +13,8 @@ After cloning this repository, make sure you have a conda distribution installed
 - `conda env create -f environment.yml` or `conda env create -f environment-dev.yml` (for Developers)
 - `conda activate drugexr`
 
+# Known development issues
+- black requires specific versions of typing-extensions, so you may need to run ```pip install typing-extensions --upgrade``` first.
+
 # Additional information
 The paper that accompanies the original DrugEx v2 code can be found [here](https://chemrxiv.org/engage/chemrxiv/article-details/60c75834469df47f67f455b9).
