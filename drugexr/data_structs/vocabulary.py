@@ -7,6 +7,8 @@ import numpy as np
 import torch
 from rdkit import Chem
 
+from drugexr.config.constants import MAX_TOKEN_LEN
+
 
 class Vocabulary:
     """
@@ -14,7 +16,7 @@ class Vocabulary:
     """
 
     def __init__(
-        self, vocabulary_path: Optional[os.PathLike] = None, max_len: int = 100
+        self, vocabulary_path: Optional[os.PathLike] = None, max_len: int = MAX_TOKEN_LEN
     ):
         """
         Args:
