@@ -35,7 +35,6 @@ setup(
     python_requires=">=3.7",
     platforms=["Linux"],
     packages=find_packages(),
-    install_requires=["Click"],
     entry_points={
         "console_scripts": [
             "download_raw_chembl=drugexr.tools.download_raw_chembl:download_chembl_data",
