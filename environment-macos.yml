@@ -8,7 +8,6 @@ dependencies:
   - rdkit
   - tqdm
   - pytorch
-  - cudatoolkit=11.3
   - matplotlib
   - seaborn
   - scikit-learn
@@ -20,7 +19,6 @@ dependencies:
   - black
   - pytest
   - pip:
-    - git+https://github.com/reymond-group/RAscore.git@master
     - pyprojroot
     # DEV ONLY
     - Sphinx
