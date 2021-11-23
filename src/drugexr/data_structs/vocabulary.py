@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from rdkit import Chem
 
-from drugexr.config.constants import MAX_TOKEN_LEN
+from src.drugexr.config.constants import MAX_TOKEN_LEN
 
 
 class Vocabulary:
