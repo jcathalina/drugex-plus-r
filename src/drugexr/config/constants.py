@@ -13,5 +13,5 @@ MIN_TOKEN_LEN = 10
 MAX_TOKEN_LEN = 100
 
 # data properties
-CHEMBL_26_SIZE = 1812364
+CHEMBL_26_SIZE = 2_000_000  # Approximately.
 

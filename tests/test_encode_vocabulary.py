@@ -2,7 +2,7 @@ import os
 
 from pyprojroot import here
 
-from drugexr.data_structs.vocabulary import Vocabulary
+from src.drugexr.data_structs.vocabulary import Vocabulary
 
 
 def count_lines(filepath: os.PathLike) -> int:
