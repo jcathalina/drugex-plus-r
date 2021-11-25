@@ -13,7 +13,7 @@ from rdkit.Chem.QED import qed
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import KFold, StratifiedKFold
 
-from src.drugexr.config.constants import RAW_DATA_PATH
+from src.drugexr.config.constants import MODEL_PATH, RAW_DATA_PATH, ROOT_PATH
 from src.drugexr.scoring import sa_scorer
 
 
@@ -240,16 +240,22 @@ def single_task(
 
     test_x = Predictor.calc_fp([Chem.MolFromSmiles(mol) for mol in test.index])
     data_x = Predictor.calc_fp([Chem.MolFromSmiles(mol) for mol in data.index])
-    out = Path(f"output/single/{alg}_{'REG' if reg else 'CLF'}_{feat}")
+    out_dir = MODEL_PATH / "output/single"
+
+    if not Path.exists(out_dir):
+        logging.info(f"Creating directories to store environment training output @ '{out_dir}'")
+        Path(out_dir).mkdir(parents=True)
+
+    out = out_dir / f"{alg.value}_{'REG' if reg else 'CLF'}_{feat}"
     X = np.concatenate([data_x, test_x], axis=0)
     y = np.concatenate([data.values, test.values], axis=0)
-    train_rf(X, y[:, 0], out_filepath=(out / ".pkg"), reg=reg)
+    train_rf(X, y, out_filepath=(out.with_suffix(".pkg")), reg=reg)
     data, test = data.to_frame(name="Label"), test.to_frame(name="Label")
     data["Score"], test["Score"] = cross_validation(
         data_x, data.values, test_x, test.values, alg, reg=reg
     )
-    data.to_csv(out / ".cv.tsv", sep="\t")
-    test.to_csv(out / ".ind.tsv", sep="\t")
+    data.to_csv(out.with_suffix(".cv.tsv"), sep="\t")
+    test.to_csv(out.with_suffix(".ind.tsv"), sep="\t")
 
 
 def main():
