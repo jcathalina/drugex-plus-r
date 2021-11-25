@@ -4,15 +4,19 @@ import pathlib
 from typing import List
 
 import pandas as pd
-
-from drugexr.config.constants import RAW_DATA_PATH, PROC_DATA_PATH, ROOT_PATH, MIN_TOKEN_LEN, MAX_TOKEN_LEN, \
-    CHEMBL_26_SIZE
-from drugexr.utils import cleaning
 from rdkit import Chem
 from tqdm import tqdm
 
+from drugexr.config.constants import (
+    CHEMBL_26_SIZE,
+    MAX_TOKEN_LEN,
+    MIN_TOKEN_LEN,
+    PROC_DATA_PATH,
+    RAW_DATA_PATH,
+    ROOT_PATH,
+)
 from drugexr.data_structs.vocabulary import Vocabulary
-
+from drugexr.utils import cleaning
 
 logging.basicConfig(filename=ROOT_PATH / "logs/preprocess.log", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -101,7 +105,11 @@ def get_mols_from_sdf(is_isomeric: bool, raw_data_filepath: pathlib.Path) -> Lis
 
 
 def main():
-    preprocess(raw_data_filepath=RAW_DATA_PATH / "chembl_26.sdf.gz", destdir=PROC_DATA_PATH, is_sdf=True)
+    preprocess(
+        raw_data_filepath=RAW_DATA_PATH / "chembl_26.sdf.gz",
+        destdir=PROC_DATA_PATH,
+        is_sdf=True,
+    )
 
 
 if __name__ == "__main__":

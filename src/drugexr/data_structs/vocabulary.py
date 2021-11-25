@@ -1,7 +1,7 @@
 import copy
 import os
 import re
-from typing import List, Optional, Iterable, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -16,7 +16,9 @@ class Vocabulary:
     """
 
     def __init__(
-        self, vocabulary_path: Optional[os.PathLike] = None, max_len: int = MAX_TOKEN_LEN
+        self,
+        vocabulary_path: Optional[os.PathLike] = None,
+        max_len: int = MAX_TOKEN_LEN,
     ):
         """
         Args:

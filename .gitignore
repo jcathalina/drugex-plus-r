@@ -21,3 +21,6 @@ data/raw/*.sdf.gz
 
 # Pytest cache
 .pytest_cache
+
+# logs
+*.log
