@@ -14,10 +14,10 @@ After cloning this repository, make sure you have a conda distribution installed
 - `conda activate drugexr`
 
 # Data Version Control (DVC)
-This project uses DVC to version control large data files and trained models in an AWS S3 bucket.
+This project uses DVC to version control large data files and trained models on [DagsHub](https://dagshub.com/naisuu/drugex-plus-r).
 To use DVC, run the following commands:
 - `conda install -c conda-forge mamba`
-- `mamba install -c conda-forge dvc-s3`
+- `mamba install -c conda-forge dvc`
 
 
 # Known development issues
