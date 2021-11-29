@@ -6,122 +6,19 @@ from typing import Tuple
 import joblib
 import numpy as np
 import pandas as pd
-from rdkit import Chem, DataStructs
-from rdkit.Chem import AllChem, Crippen, Descriptors, Lipinski
-from rdkit.Chem.GraphDescriptors import BertzCT
-from rdkit.Chem.QED import qed
+from rdkit import Chem
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import KFold, StratifiedKFold
 
-from src.drugexr.config.constants import MODEL_PATH, RAW_DATA_PATH, ROOT_PATH
-from src.drugexr.scoring import sa_scorer
+from src.drugexr.config.constants import MODEL_PATH, RAW_DATA_PATH
+from src.drugexr.models.predictor import Predictor
 
 
 class AlgorithmType(Enum):
     RF = "RF"
 
 
-class Property:
-    def __init__(self, prop="MW"):
-        self.prop = prop
-        self.prop_dict = {
-            "MW": Descriptors.MolWt,
-            "logP": Crippen.MolLogP,
-            "HBA": AllChem.CalcNumLipinskiHBA,
-            "HBD": AllChem.CalcNumLipinskiHBD,
-            "Rotable": AllChem.CalcNumRotatableBonds,
-            "Amide": AllChem.CalcNumAmideBonds,
-            "Bridge": AllChem.CalcNumBridgeheadAtoms,
-            "Hetero": AllChem.CalcNumHeteroatoms,
-            "Heavy": Lipinski.HeavyAtomCount,
-            "Spiro": AllChem.CalcNumSpiroAtoms,
-            "FCSP3": AllChem.CalcFractionCSP3,
-            "Ring": Lipinski.RingCount,
-            "Aliphatic": AllChem.CalcNumAliphaticRings,
-            "Aromatic": AllChem.CalcNumAromaticRings,
-            "Saturated": AllChem.CalcNumSaturatedRings,
-            "HeteroR": AllChem.CalcNumHeterocycles,
-            "TPSA": AllChem.CalcTPSA,
-            "Valence": Descriptors.NumValenceElectrons,
-            "MR": Crippen.MolMR,
-            "QED": qed,
-            "SA": sa_scorer.calculateScore,
-            "Bertz": BertzCT,
-        }
-
-    def __call__(self, mols):
-        scores = np.zeros(len(mols))
-        for i, mol in enumerate(mols):
-            try:
-                scores[i] = self.prop_dict[self.prop](mol)
-            except Exception as e:
-                # TODO: This exception is actually handle-able.
-                continue
-        return scores
-
-
-class Predictor:
-    def __init__(self, path, type="CLF"):
-        self.type = type
-        self.model = joblib.load(path)
-
-    def __call__(self, fps):
-        if self.type == "CLF":
-            scores = self.model.predict_proba(fps)[:, 1]
-        else:
-            scores = self.model.predict(fps)
-        return scores
-
-    @classmethod
-    def calc_fp(cls, mols, radius=3, bit_len=2048):
-        ecfp = cls.calc_ecfp(mols, radius=radius, bit_len=bit_len)
-        phch = cls.calc_physchem(mols)
-        fps = np.concatenate([ecfp, phch], axis=1)
-        return fps
-
-    @classmethod
-    def calc_ecfp(cls, mols, radius=3, bit_len=2048):
-        fps = np.zeros((len(mols), bit_len))
-        for i, mol in enumerate(mols):
-            try:
-                fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=bit_len)
-                DataStructs.ConvertToNumpyArray(fp, fps[i, :])
-            except Exception as e:
-                logging.error(f"Something went wrong while creating fingerprints: {e}")
-        return fps
-
-    @classmethod
-    def calc_physchem(cls, mols):
-        prop_list = [
-            "MW",
-            "logP",
-            "HBA",
-            "HBD",
-            "Rotable",
-            "Amide",
-            "Bridge",
-            "Hetero",
-            "Heavy",
-            "Spiro",
-            "FCSP3",
-            "Ring",
-            "Aliphatic",
-            "Aromatic",
-            "Saturated",
-            "HeteroR",
-            "TPSA",
-            "Valence",
-            "MR",
-        ]
-        fps = np.zeros((len(mols), 19))
-        props = Property()
-        for i, prop in enumerate(prop_list):
-            props.prop = prop
-            fps[:, i] = props(mols)
-        return fps
-
-
-def random_forest_cv(X, y, X_ind, y_ind, reg=False, n_splits: int = 5):
+def random_forest_cv(X, y, X_ind, y_ind, reg: bool = False, n_splits: int = 5):
     """Cross validation and Independent test for RF classification/regression model.
     Arguments:
         X (np.ndarray): m x n feature matrix for cross validation, where m is the number of samples
@@ -243,7 +140,9 @@ def single_task(
     out_dir = MODEL_PATH / "output/single"
 
     if not Path.exists(out_dir):
-        logging.info(f"Creating directories to store environment training output @ '{out_dir}'")
+        logging.info(
+            f"Creating directories to store environment training output @ '{out_dir}'"
+        )
         Path(out_dir).mkdir(parents=True)
 
     out = out_dir / f"{alg.value}_{'REG' if reg else 'CLF'}_{feat}"
@@ -261,6 +160,8 @@ def single_task(
 def main():
     import os
 
+    # TODO: Extract to config
+
     pair = [
         "Target_ChEMBL_ID",
         "Smiles",
@@ -277,7 +178,6 @@ def main():
     # targets = ['CHEMBL226', 'CHEMBL251', 'CHEMBL240']
 
     for reg in [False, True]:
-        lr = 1e-4 if reg else 1e-5
         for target in targets:
             single_task(
                 feat=target,

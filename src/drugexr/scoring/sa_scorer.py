@@ -7,51 +7,51 @@
 # http://www.jcheminf.com/content/1/1/8
 #
 # several small modifications to the original paper are included
-# particularly slightly different formula for marocyclic penalty
+# particularly slightly different formula for macrocyclic penalty
 # and taking into account also molecule symmetry (fingerprint density)
 #
 # for a set of 10k diverse molecules the agreement between the original method
 # as implemented in PipelinePilot and this implementation is r2 = 0.97
 #
-# peter ertl & greg landrum, september 2013
+# Peter Ertl & Greg Landrum, september 2013
 #
 
 
+import gzip
 import math
 import os.path as op
 import pickle
-from collections import defaultdict
+from typing import Dict, Optional
 
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
 
-_fscores = None
+_fscores: Optional[Dict] = None
 
 
-def readFragmentScores(name="fpscores"):
-    import gzip
+def read_fragment_scores(name: str = "fpscores") -> None:
 
     global _fscores
     # generate the full path filename:
     if name == "fpscores":
         name = op.join(op.dirname(__file__), name)
-    data = pickle.load(gzip.open("%s.pkl.gz" % name))
-    outDict = {}
+    data = pickle.load(gzip.open(f"{name}.pkl.gz"))
+    out_dict = {}
     for i in data:
         for j in range(1, len(i)):
-            outDict[i[j]] = float(i[0])
-    _fscores = outDict
+            out_dict[i[j]] = float(i[0])
+    _fscores = out_dict
 
 
-def numBridgeheadsAndSpiro(mol, ri=None):
-    nSpiro = rdMolDescriptors.CalcNumSpiroAtoms(mol)
-    nBridgehead = rdMolDescriptors.CalcNumBridgeheadAtoms(mol)
-    return nBridgehead, nSpiro
+def num_bridgeheads_and_spiro(mol, ri=None):
+    n_spiro = rdMolDescriptors.CalcNumSpiroAtoms(mol)
+    n_bridgehead = rdMolDescriptors.CalcNumBridgeheadAtoms(mol)
+    return n_bridgehead, n_spiro
 
 
-def calculateScore(m):
+def calculate_score(m):
     if _fscores is None:
-        readFragmentScores()
+        read_fragment_scores()
 
     # fragment score
     fp = rdMolDescriptors.GetMorganFingerprint(
@@ -60,74 +60,74 @@ def calculateScore(m):
     fps = fp.GetNonzeroElements()
     score1 = 0.0
     nf = 0
-    for bitId, v in fps.items():
+    for bit_id, v in fps.items():
         nf += v
-        sfp = bitId
+        sfp = bit_id
         score1 += _fscores.get(sfp, -4) * v
     score1 /= nf
 
     # features score
-    nAtoms = m.GetNumAtoms()
-    nChiralCenters = len(Chem.FindMolChiralCenters(m, includeUnassigned=True))
+    n_atoms = m.GetNumAtoms()
+    n_chiral_centers = len(Chem.FindMolChiralCenters(m, includeUnassigned=True))
     ri = m.GetRingInfo()
-    nBridgeheads, nSpiro = numBridgeheadsAndSpiro(m, ri)
-    nMacrocycles = 0
+    n_bridgeheads, n_spiro = num_bridgeheads_and_spiro(m, ri)
+    n_macrocycles = 0
     for x in ri.AtomRings():
         if len(x) > 8:
-            nMacrocycles += 1
+            n_macrocycles += 1
 
-    sizePenalty = nAtoms ** 1.005 - nAtoms
-    stereoPenalty = math.log10(nChiralCenters + 1)
-    spiroPenalty = math.log10(nSpiro + 1)
-    bridgePenalty = math.log10(nBridgeheads + 1)
-    macrocyclePenalty = 0.0
+    size_penalty = n_atoms ** 1.005 - n_atoms
+    stereo_penalty = math.log10(n_chiral_centers + 1)
+    spiro_penalty = math.log10(n_spiro + 1)
+    bridge_penalty = math.log10(n_bridgeheads + 1)
+    macrocycle_penalty = 0.0
     # ---------------------------------------
     # This differs from the paper, which defines:
-    #  macrocyclePenalty = math.log10(nMacrocycles+1)
+    #  macrocyclePenalty = math.log10(n_macrocycles+1)
     # This form generates better results when 2 or more macrocycles are present
-    if nMacrocycles > 0:
-        macrocyclePenalty = math.log10(2)
+    if n_macrocycles > 0:
+        macrocycle_penalty = math.log10(2)
 
     score2 = (
         0.0
-        - sizePenalty
-        - stereoPenalty
-        - spiroPenalty
-        - bridgePenalty
-        - macrocyclePenalty
+        - size_penalty
+        - stereo_penalty
+        - spiro_penalty
+        - bridge_penalty
+        - macrocycle_penalty
     )
 
     # correction for the fingerprint density
     # not in the original publication, added in version 1.1
-    # to make highly symmetrical molecules easier to synthetise
+    # to make highly symmetrical molecules easier to synthesise
     score3 = 0.0
-    if nAtoms > len(fps):
-        score3 = math.log(float(nAtoms) / len(fps)) * 0.5
+    if n_atoms > len(fps):
+        score3 = math.log(float(n_atoms) / len(fps)) * 0.5
 
-    sascore = score1 + score2 + score3
+    sa_score = score1 + score2 + score3
 
     # need to transform "raw" value into scale between 1 and 10
-    min = -4.0
-    max = 2.5
-    sascore = 11.0 - (sascore - min + 1) / (max - min) * 9.0
+    min_ = -4.0
+    max_ = 2.5
+    sa_score = 11.0 - (sa_score - min_ + 1) / (max_ - min_) * 9.0
     # smooth the 10-end
-    if sascore > 8.0:
-        sascore = 8.0 + math.log(sascore + 1.0 - 9.0)
-    if sascore > 10.0:
-        sascore = 10.0
-    elif sascore < 1.0:
-        sascore = 1.0
+    if sa_score > 8.0:
+        sa_score = 8.0 + math.log(sa_score + 1.0 - 9.0)
+    if sa_score > 10.0:
+        sa_score = 10.0
+    elif sa_score < 1.0:
+        sa_score = 1.0
 
-    return sascore
+    return sa_score
 
 
-def processMols(mols):
+def process_mols(mols):
     print("smiles\tName\tsa_score")
     for i, m in enumerate(mols):
         if m is None:
             continue
 
-        s = calculateScore(m)
+        s = calculate_score(m)
 
         smiles = Chem.MolToSmiles(m)
         print(smiles + "\t" + m.GetProp("_Name") + "\t%3f" % s)
