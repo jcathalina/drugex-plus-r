@@ -124,12 +124,12 @@ def single_task(
     if not reg:
         df = (df > px_threshold).astype(float)
     df = df.sample(len(df))
-    print(
-        feat,
-        len(numery[numery >= px_threshold]),
-        len(numery[numery < px_threshold]),
-        len(binary),
-    )
+    logging.info(f"""
+        Feat: {feat}
+        Above px={px_threshold}: {len(numery[numery >= px_threshold])}
+        Below px={px_threshold}: {len(numery[numery < px_threshold])}
+        Binaries: {len(binary)}
+    """)
 
     test_ix = set(df.index).intersection(test)
     test = df.loc[test_ix].dropna()
