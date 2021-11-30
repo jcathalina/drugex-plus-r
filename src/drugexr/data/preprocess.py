@@ -7,11 +7,11 @@ import pandas as pd
 from rdkit import Chem
 from tqdm import tqdm
 
-from drugexr.config.constants import (CHEMBL_26_SIZE, MAX_TOKEN_LEN,
+from src.drugexr.config.constants import (CHEMBL_26_SIZE, MAX_TOKEN_LEN,
                                       MIN_TOKEN_LEN, PROC_DATA_PATH,
                                       RAW_DATA_PATH, ROOT_PATH)
-from drugexr.data_structs.vocabulary import Vocabulary
-from drugexr.utils import cleaning
+from src.drugexr.data_structs.vocabulary import Vocabulary
+from src.drugexr.utils import cleaning
 
 logging.basicConfig(filename=ROOT_PATH / "logs/preprocess.log", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def preprocess(
     raw_data_filepath: pathlib.Path,
     destdir: pathlib.Path,
-    is_sdf: bool = False,
+    corpus_type: str,
     requires_clean: bool = True,
     is_isomeric: bool = False,
 ):
@@ -28,18 +28,20 @@ def preprocess(
     into a series of tokens. In the end, all the tokens will be put into one set as vocabulary.
     Arguments:
         raw_data_filepath (pathlib.Path): The file path of input, either .sdf file or tab-delimited file
-        destdir (pathlib.Path): The file path of output
-        is_sdf (bool): Designate if the input file is sdf file or not
+        destdir (pathlib.Path): The file path to write the created files to.
+        corpus_type (str): type of the file to be processed and written. Can be 'chembl' or 'ligand'.
         requires_clean (bool): If the molecule is required to be clean, the charge metal will be
                 removed and only the largest fragment will be kept.
         is_isomeric (bool): If the molecules in the dataset keep conformational information. If not,
                 the conformational tokens (e.g. @@, @, \, /) will be removed.
     """
-    if is_sdf:
+    if corpus_type == "chembl":
         df = get_mols_from_sdf(is_isomeric, raw_data_filepath)
-    else:
-        # handle table file
+    elif corpus_type == "ligand":
         df = pd.read_table(raw_data_filepath).Smiles.dropna()
+    else:
+        raise ValueError("Only valid corpus types are 'chembl' and 'ligand'.")
+
     voc = Vocabulary()
     words = set()
     canons = []
@@ -71,19 +73,20 @@ def preprocess(
             tokens.append(" ".join(token))
 
     # output the vocabulary file
-    with open(destdir / "_voc.txt", "w") as voc_file:
+    with open(destdir / f"{corpus_type}_voc.txt", "w") as voc_file:
         voc_file.write("\n".join(sorted(words)))
 
-    write_corpus(canon_smiles=canons, destdir=destdir, tokens=tokens)
+    outfile = destdir / f"{corpus_type}_corpus.txt"
+    write_corpus(canon_smiles=canons, outfile=outfile, tokens=tokens)
 
 
-def write_corpus(canon_smiles, destdir, tokens):
+def write_corpus(canon_smiles, outfile, tokens):
     """Output the dataset file as tab-delimited file"""
     corpus_df = pd.DataFrame()
     corpus_df["Smiles"] = canon_smiles
     corpus_df["Token"] = tokens
     corpus_df.drop_duplicates(subset="Smiles")
-    corpus_df.to_csv(path_or_buf=destdir / "_corpus.txt", sep="\t", index=False)
+    corpus_df.to_csv(path_or_buf=outfile, sep="\t", index=False)
 
 
 def get_mols_from_sdf(is_isomeric: bool, raw_data_filepath: pathlib.Path) -> List[str]:
@@ -103,7 +106,13 @@ def main():
     preprocess(
         raw_data_filepath=RAW_DATA_PATH / "chembl_26.sdf.gz",
         destdir=PROC_DATA_PATH,
-        is_sdf=True,
+        corpus_type="chembl",
+    )
+
+    preprocess(
+        raw_data_filepath=RAW_DATA_PATH / "ligand_raw.tsv",
+        destdir=PROC_DATA_PATH,
+        corpus_type="ligand",
     )
 
 

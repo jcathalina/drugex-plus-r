@@ -1,0 +1,4 @@
+outs:
+- md5: b364d686d4d15cf26dbb111e1a44b930
+  size: 4128581
+  path: ligand_corpus.txt

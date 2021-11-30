@@ -1,3 +1,5 @@
 /vocabulary.txt
-/_corpus.txt
-/_voc.txt
+/chembl_corpus.txt
+/chembl_voc.txt
+/ligand_corpus.txt
+/ligand_voc.txt
