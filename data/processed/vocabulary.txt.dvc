@@ -1,4 +1,4 @@
 outs:
 - md5: 3eb42290a2bf7302fca11249036fa37d
-  size: 348
+  size: 430
   path: vocabulary.txt
