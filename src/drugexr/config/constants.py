@@ -1,3 +1,4 @@
+import torch
 from pyprojroot import here
 
 # data directory consts
@@ -16,3 +17,5 @@ MAX_TOKEN_LEN = 100
 
 # data properties
 CHEMBL_26_SIZE = 2_000_000  # Approximately.
+
+DEVICE = torch.device("cuda")

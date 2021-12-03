@@ -4,7 +4,8 @@ import numpy as np
 import torch
 from torch import nn, optim
 
-device = torch.device("cuda")  # TODO: Extract to config
+from src.drugexr.config.constants import DEVICE
+from src.drugexr.utils import tensor_ops
 
 
 # TODO: Refactor class code
@@ -22,7 +23,7 @@ class Generator(nn.Module):
         self.rnn = rnn_layer(embed_size, hidden_size, num_layers=3, batch_first=True)
         self.linear = nn.Linear(hidden_size, voc.size)
         self.optim = optim.Adam(self.parameters(), lr=lr)
-        self.to(device)
+        self.to(DEVICE)
 
     def forward(self, input, h):
         output = self.embed(input.unsqueeze(-1))
@@ -31,18 +32,18 @@ class Generator(nn.Module):
         return output, h_out
 
     def init_h(self, batch_size, labels=None):
-        h = torch.rand(3, batch_size, 512).to(device)
+        h = torch.rand(3, batch_size, 512).to(DEVICE)
         if labels is not None:
             h[0, batch_size, 0] = labels
         if self.is_lstm:
-            c = torch.rand(3, batch_size, self.hidden_size).to(device)
+            c = torch.rand(3, batch_size, self.hidden_size).to(DEVICE)
         return (h, c) if self.is_lstm else h
 
     def likelihood(self, target):
         batch_size, seq_len = target.size()
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(device)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
         h = self.init_h(batch_size)
-        scores = torch.zeros(batch_size, seq_len).to(device)
+        scores = torch.zeros(batch_size, seq_len).to(DEVICE)
         for step in range(seq_len):
             logits, h = self(x, h)
             logits = logits.log_softmax(dim=-1)
@@ -61,10 +62,10 @@ class Generator(nn.Module):
             self.optim.step()
 
     def sample(self, batch_size):
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(device)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
         h = self.init_h(batch_size)
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(device)
-        isEnd = torch.zeros(batch_size).bool().to(device)
+        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
+        isEnd = torch.zeros(batch_size).bool().to(DEVICE)
 
         for step in range(self.voc.max_len):
             logit, h = self(x, h)
@@ -81,27 +82,27 @@ class Generator(nn.Module):
 
     def evolve(self, batch_size, epsilon=0.01, crover=None, mutate=None):
         # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(device)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
         # Hidden states initialization for exploitation network
         h = self.init_h(batch_size)
         # Hidden states initialization for exploration network
         h1 = self.init_h(batch_size)
         h2 = self.init_h(batch_size)
         # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(device)
+        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
         # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool().to(device)
+        is_end = torch.zeros(batch_size).bool().to(DEVICE)
 
         for step in range(self.voc.max_len):
             logit, h = self(x, h)
             proba = logit.softmax(dim=-1)
             if crover is not None:
-                ratio = torch.rand(batch_size, 1).to(device)
+                ratio = torch.rand(batch_size, 1).to(DEVICE)
                 logit1, h1 = crover(x, h1)
                 proba = proba * ratio + logit1.softmax(dim=-1) * (1 - ratio)
             if mutate is not None:
                 logit2, h2 = mutate(x, h2)
-                is_mutate = (torch.rand(batch_size) < epsilon).to(device)
+                is_mutate = (torch.rand(batch_size) < epsilon).to(DEVICE)
                 proba[is_mutate, :] = logit2.softmax(dim=-1)[is_mutate, :]
             # sampling based on output probability distribution
             x = torch.multinomial(proba, 1).view(-1)
@@ -115,15 +116,15 @@ class Generator(nn.Module):
 
     def evolve1(self, batch_size, epsilon=0.01, crover=None, mutate=None):
         # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(device)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
         # Hidden states initialization for exploitation network
         h = self.init_h(batch_size)
         # Hidden states initialization for exploration network
         h2 = self.init_h(batch_size)
         # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(device)
+        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
         # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool().to(device)
+        is_end = torch.zeros(batch_size).bool().to(DEVICE)
 
         for step in range(self.voc.max_len):
             is_change = torch.rand(1) < 0.5
@@ -134,7 +135,7 @@ class Generator(nn.Module):
             proba = logit.softmax(dim=-1)
             if mutate is not None:
                 logit2, h2 = mutate(x, h2)
-                ratio = torch.rand(batch_size, 1).to(device) * epsilon
+                ratio = torch.rand(batch_size, 1).to(DEVICE) * epsilon
                 proba = (
                     logit.softmax(dim=-1) * (1 - ratio) + logit2.softmax(dim=-1) * ratio
                 )
@@ -161,13 +162,13 @@ class Generator(nn.Module):
         for epoch in range(epochs):
             for i, batch in enumerate(loader_train):
                 optimizer.zero_grad()
-                loss_train = self.likelihood(batch.to(device))
+                loss_train = self.likelihood(batch.to(DEVICE))
                 loss_train = -loss_train.mean()
                 loss_train.backward()
                 optimizer.step()
                 if i % 10 == 0 or loader_valid is not None:
                     seqs = self.sample(len(batch * 2))
-                    ix = unique(seqs)
+                    ix = tensor_ops.unique(seqs)
                     seqs = seqs[ix]
                     smiles, valids = self.voc.check_smiles(seqs)
                     error = 1 - sum(valids) / len(seqs)
@@ -182,7 +183,7 @@ class Generator(nn.Module):
                         for j, batch in enumerate(loader_valid):
                             size += batch.size(0)
                             loss_valid += (
-                                -self.likelihood(batch.to(device)).sum().item()
+                                -self.likelihood(batch.to(DEVICE)).sum().item()
                             )
                         loss_valid = loss_valid / size / self.voc.max_len
                         if loss_valid < best_error:
@@ -196,17 +197,3 @@ class Generator(nn.Module):
                     for i, smile in enumerate(smiles):
                         print("%d\t%s" % (valids[i], smile), file=log)
         log.close()
-
-
-def unique(arr):
-    # Finds unique rows in arr and return their indices
-    if type(arr) == torch.Tensor:
-        arr = arr.cpu().numpy()
-    arr_ = np.ascontiguousarray(arr).view(
-        np.dtype((np.void, arr.dtype.itemsize * arr.shape[1]))
-    )
-    _, idxs = np.unique(arr_, return_index=True)
-    idxs = np.sort(idxs)
-    if type(arr) == torch.Tensor:
-        idxs = torch.LongTensor(idxs).to(arr.get_device())
-    return idxs
