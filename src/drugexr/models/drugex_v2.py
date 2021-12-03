@@ -24,10 +24,10 @@ class DrugExV2(PGLearner):
     """
 
     def __init__(
-        self, agent, env, prior=None, crover=None, mean_func="geometric", memory=None
+        self, agent, env, prior=None, crover=None, mean_func="geometric", memory=None, epochs: int = 10_000
     ):
         super(DrugExV2, self).__init__(
-            agent, env, prior, mean_func=mean_func, memory=memory
+            agent, env, prior, mean_func=mean_func, memory=memory, epochs=epochs
         )
         self.crover = crover
 
@@ -65,13 +65,13 @@ class DrugExV2(PGLearner):
 
     def fit(self):
         best = 0
-        log = open(self.out + ".log", "w")
+        log = open(self.out.with_suffix(".log"), "w")
         last_smiles = []
         last_scores = []
         interval = 250
         last_save = -1
 
-        for epoch in range(10000):
+        for epoch in range(self.epochs):
             print("\n----------\nEPOCH %d\n----------" % epoch)
             if epoch < interval and self.memory is not None:
                 self.policy_gradient(crover=None, memory=self.memory, epsilon=1e-1)
@@ -104,7 +104,7 @@ class DrugExV2(PGLearner):
                 file=log,
             )
             if best < score:
-                torch.save(self.agent.state_dict(), self.out + ".pkg")
+                torch.save(self.agent.state_dict(), self.out.with_suffix(".pkg"))
                 best = score
                 last_smiles = smiles
                 last_scores = scores
@@ -114,8 +114,8 @@ class DrugExV2(PGLearner):
                 for i, smile in enumerate(last_smiles):
                     score = "\t".join(["%.3f" % s for s in last_scores.values[i]])
                     print("%s\t%s" % (score, smile), file=log)
-                self.agent.load_state_dict(torch.load(self.out + ".pkg"))
-                self.crover.load_state_dict(torch.load(self.out + ".pkg"))
+                self.agent.load_state_dict(torch.load(self.out.with_suffix(".pkg")))
+                self.crover.load_state_dict(torch.load(self.out.with_suffix(".pkg")))
             if epoch - last_save > interval:
                 break
         log.close()

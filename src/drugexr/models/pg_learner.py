@@ -1,4 +1,6 @@
 """ module containing the Policy Gradient model that all other reinforcement learning framework models inherit from """
+from pathlib import Path
+
 import torch
 
 import src.drugexr.utils.tensor_ops
@@ -20,7 +22,15 @@ class PGLearner(object):
         mean_func: TODO
     """
 
-    def __init__(self, agent: Generator, env: Environment, prior=None, memory=None, mean_func="geometric"):
+    def __init__(
+        self,
+        agent: Generator,
+        env: Environment,
+        prior=None,
+        memory=None,
+        mean_func="geometric",
+        epochs: int = 1_000
+    ):
         self.replay = 10
         self.agent = agent
         self.prior = prior
@@ -30,10 +40,11 @@ class PGLearner(object):
         self.epsilon = 1e-3
         self.penalty = 0
         self.scheme = "PR"
-        self.out = None
+        self.out: Path = None  # TODO: What's the point of this one
         self.memory = memory
         # mean_func: which function to use for averaging: 'arithmetic' or 'geometric'
         self.mean_func = mean_func
+        self.epochs = epochs
 
     def policy_gradient(self):
         pass
@@ -41,8 +52,8 @@ class PGLearner(object):
     def fit(self):
         best = 0
         last_save = 0
-        with open(self.out + ".log", "w") as log:
-            for epoch in range(1000):
+        with open(self.out.with_suffix(".log"), "w") as log:
+            for epoch in range(self.epochs):
                 print("\n----------\nEPOCH %d\n----------" % epoch)
                 self.policy_gradient()
                 seqs = self.agent.sample(self.n_samples)
@@ -55,7 +66,7 @@ class PGLearner(object):
                 valid = scores.VALID.mean()
 
                 if best <= score:
-                    torch.save(self.agent.state_dict(), self.out + ".pkg")
+                    torch.save(self.agent.state_dict(), self.out.with_suffix(".pkg"))
                     best = score
                     last_save = epoch
 
