@@ -24,10 +24,16 @@ class DrugExV2(PGLearner):
     """
 
     def __init__(
-        self, agent, env, prior=None, crover=None, mean_func="geometric", memory=None, epochs: int = 10_000
+        self,
+        agent,
+        env,
+        prior=None,
+        crover=None,
+        mean_func="geometric",
+        memory=None,
     ):
         super(DrugExV2, self).__init__(
-            agent, env, prior, mean_func=mean_func, memory=memory, epochs=epochs
+            agent, env, prior, mean_func=mean_func, memory=memory
         )
         self.crover = crover
 
@@ -53,7 +59,7 @@ class DrugExV2(PGLearner):
         scores = self.env.calc_reward(smiles, self.scheme)
         if memory is not None:
             scores[: len(memory), 0] = 1
-            ix = scores[:, 0].argsort()[-self.batch_size * 4:]
+            ix = scores[:, 0].argsort()[-self.batch_size * 4 :]
             seqs, scores = seqs[ix, :], scores[ix, :]
         t2 = time.time()
         ds = TensorDataset(seqs, torch.Tensor(scores).to(DEVICE))
@@ -63,7 +69,7 @@ class DrugExV2(PGLearner):
         t3 = time.time()
         print(t1 - start, t2 - t1, t3 - t2)
 
-    def fit(self):
+    def fit(self, epochs: int = 10_000):
         best = 0
         log = open(self.out.with_suffix(".log"), "w")
         last_smiles = []
@@ -71,7 +77,7 @@ class DrugExV2(PGLearner):
         interval = 250
         last_save = -1
 
-        for epoch in range(self.epochs):
+        for epoch in range(epochs):
             print("\n----------\nEPOCH %d\n----------" % epoch)
             if epoch < interval and self.memory is not None:
                 self.policy_gradient(crover=None, memory=self.memory, epsilon=1e-1)
@@ -79,7 +85,11 @@ class DrugExV2(PGLearner):
                 self.policy_gradient(crover=self.crover, epsilon=self.epsilon)
             seqs = self.agent.sample(self.n_samples)
             smiles = [self.agent.voc.decode(s) for s in seqs]
-            # smiles = np.array(utils.canonicalize_list(smiles))  # TODO: Check if this is necessary & if not, remove.
+
+            # TODO: This section can probably be optimized --> less conversions to np arrays?
+            smiles = np.array(
+                tensor_ops.canonicalize_smiles_list(smiles)
+            )  # TODO: Confirm if this step is critical
             ix = tensor_ops.unique(np.array([[s] for s in smiles]))
             smiles = smiles[ix]
             scores = self.env(smiles, is_smiles=True)

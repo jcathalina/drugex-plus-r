@@ -35,8 +35,8 @@ def pretrain_rnn(is_lstm: bool = True):
         pathlib.Path(out_dir).mkdir(parents=True)
 
     if is_lstm:
-        netP_path = out_dir / "lstm_chembl"
-        netE_path = out_dir / "lstm_ligand"
+        netP_path = out_dir / "lstm_chembl_T"
+        netE_path = out_dir / "lstm_ligand_T"
     else:
         netP_path = out_dir / "gru_chembl"
         netE_path = out_dir / "gru_ligand"
@@ -62,7 +62,7 @@ def pretrain_rnn(is_lstm: bool = True):
     valid = DataLoader(valid, batch_size=BATCH_SIZE, shuffle=True)
     print("Fine tuning progress begins to be trained...")
 
-    prior.fit(train, loader_valid=valid, out=netE_path, epochs=1000, lr=lr)
+    prior.fit(train, loader_valid=valid, out=netE_path, epochs=10, lr=lr)
     print("Fine tuning progress training is finished...")
 
 

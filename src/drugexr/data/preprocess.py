@@ -7,9 +7,14 @@ import pandas as pd
 from rdkit import Chem
 from tqdm import tqdm
 
-from src.drugexr.config.constants import (CHEMBL_26_SIZE, MAX_TOKEN_LEN,
-                                          MIN_TOKEN_LEN, PROC_DATA_PATH,
-                                          RAW_DATA_PATH, ROOT_PATH)
+from src.drugexr.config.constants import (
+    CHEMBL_26_SIZE,
+    MAX_TOKEN_LEN,
+    MIN_TOKEN_LEN,
+    PROC_DATA_PATH,
+    RAW_DATA_PATH,
+    ROOT_PATH,
+)
 from src.drugexr.data_structs.vocabulary import Vocabulary
 from src.drugexr.utils import cleaning
 

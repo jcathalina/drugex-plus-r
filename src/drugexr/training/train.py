@@ -7,13 +7,14 @@ from shutil import copy2
 
 import torch
 
-from src.drugexr.config.constants import PROC_DATA_PATH, MODEL_PATH, ROOT_PATH
+from src.drugexr.config.constants import PROC_DATA_PATH, MODEL_PATH, ROOT_PATH, TEST_RUN
 from src.drugexr.data_structs.environment import Environment
 from src.drugexr.data_structs.vocabulary import Vocabulary
 from src.drugexr.models.drugex_v2 import DrugExV2
 from src.drugexr.models.generator import Generator
 from src.drugexr.models.predictor import Predictor
 from src.drugexr.utils import normalization
+
 
 if __name__ == "__main__":
     opts, args = getopt.getopt(sys.argv[1:], "a:e:b:g:c:s:z:")
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     # construct the environment with three predictors
     # keys = ['A1', 'A2A', 'ERG']
     keys = ["A1"]
-    A1 = Predictor("output/env/RF_%s_CHEMBL226.pkg" % z, type_=z)
+    A1 = Predictor(MODEL_PATH / f"output/single/RF_{z}_CHEMBL226.pkg", type_=z)
     # A2A = Predictor('output/env/RF_%s_CHEMBL251.pkg' % z, type=z)
     # ERG = Predictor('output/env/RF_%s_CHEMBL240.pkg' % z, type=z)
 
@@ -38,11 +39,12 @@ if __name__ == "__main__":
     if scheme == "WS":
         mod1 = normalization.ClippedScore(lower_x=3, upper_x=10)
         mod2 = normalization.ClippedScore(lower_x=10, upper_x=3)
-        ths = [0.5] * 3
+        ths = [0.5] * len(objs)  # 3
     else:
         mod1 = normalization.ClippedScore(lower_x=3, upper_x=6.5)
         mod2 = normalization.ClippedScore(lower_x=10, upper_x=6.5)
-        ths = [0.99] * 3
+        ths = [0.99] * len(objs)  # 3
+
     mods = [mod1, mod1, mod2] if case == "OBJ3" else [mod2, mod1, mod2]
     env = Environment(objs=objs, mods=mods, keys=keys, ths=ths)
 
@@ -58,7 +60,7 @@ if __name__ == "__main__":
     copy2(ROOT_PATH / "src/drugexr/training/train.py", root)
 
     pr_path: Path = MODEL_PATH / "output/rnn/lstm_chembl"
-    ft_path: Path = MODEL_PATH / "output/rnn/lstm_ligand"
+    ft_path: Path = MODEL_PATH / "output/rnn/lstm_ligand_T"
 
     voc = Vocabulary(vocabulary_path=PROC_DATA_PATH / "chembl_voc.txt")
     agent = Generator(voc)
@@ -79,4 +81,6 @@ if __name__ == "__main__":
     outfile += "_%.0e" % learner.epsilon
 
     learner.out = root / outfile
-    learner.fit()
+
+    epochs = 50 if TEST_RUN else 10_000
+    learner.fit(epochs=epochs)

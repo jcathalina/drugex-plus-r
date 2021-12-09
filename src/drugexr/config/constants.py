@@ -19,3 +19,5 @@ MAX_TOKEN_LEN = 100
 CHEMBL_26_SIZE = 2_000_000  # Approximately.
 
 DEVICE = torch.device("cuda")
+
+TEST_RUN = True  # Extract to config.

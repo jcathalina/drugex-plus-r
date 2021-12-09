@@ -29,7 +29,6 @@ class PGLearner(object):
         prior=None,
         memory=None,
         mean_func="geometric",
-        epochs: int = 1_000
     ):
         self.replay = 10
         self.agent = agent
@@ -44,16 +43,15 @@ class PGLearner(object):
         self.memory = memory
         # mean_func: which function to use for averaging: 'arithmetic' or 'geometric'
         self.mean_func = mean_func
-        self.epochs = epochs
 
     def policy_gradient(self):
         pass
 
-    def fit(self):
+    def fit(self, epochs: int = 10_000):
         best = 0
         last_save = 0
         with open(self.out.with_suffix(".log"), "w") as log:
-            for epoch in range(self.epochs):
+            for epoch in range(epochs):
                 print("\n----------\nEPOCH %d\n----------" % epoch)
                 self.policy_gradient()
                 seqs = self.agent.sample(self.n_samples)

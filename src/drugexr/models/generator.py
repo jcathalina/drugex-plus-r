@@ -47,7 +47,7 @@ class Generator(nn.Module):
         for step in range(seq_len):
             logits, h = self(x, h)
             logits = logits.log_softmax(dim=-1)
-            score = logits.gather(1, target[:, step: step + 1]).squeeze()
+            score = logits.gather(1, target[:, step : step + 1]).squeeze()
             scores[:, step] = score
             x = target[:, step]
         return scores
