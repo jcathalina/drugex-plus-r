@@ -1,20 +1,19 @@
 import getopt
 import os
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
 from shutil import copy2
 
 import torch
 
-from src.drugexr.config.constants import PROC_DATA_PATH, MODEL_PATH, ROOT_PATH, TEST_RUN
+from src.drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH, ROOT_PATH, TEST_RUN
 from src.drugexr.data_structs.environment import Environment
 from src.drugexr.data_structs.vocabulary import Vocabulary
 from src.drugexr.models.drugex_v2 import DrugExV2
 from src.drugexr.models.generator import Generator
 from src.drugexr.models.predictor import Predictor
 from src.drugexr.utils import normalization
-
 
 if __name__ == "__main__":
     opts, args = getopt.getopt(sys.argv[1:], "a:e:b:g:c:s:z:")

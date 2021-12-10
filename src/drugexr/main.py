@@ -1,10 +1,11 @@
+import os
+
 import pandas as pd
 import torch
-import os
-from tqdm import tqdm
 from rdkit import rdBase
+from tqdm import tqdm
 
-from src.drugexr.config.constants import PROC_DATA_PATH, MODEL_PATH, TEST_RUN
+from src.drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH, TEST_RUN
 from src.drugexr.data_structs.environment import Environment
 from src.drugexr.data_structs.vocabulary import Vocabulary
 from src.drugexr.models.generator import Generator
@@ -68,8 +69,6 @@ if __name__ == "__main__":
         if not benchmark_output_path.exists():
             benchmark_output_path.mkdir()
 
-
-
         for case in ["OBJ1", "OBJ3"]:
             if case == "OBJ3":
                 mods = [mod1, mod1, mod3]
@@ -77,8 +76,10 @@ if __name__ == "__main__":
                 mods = [mod2, mod1, mod3]
 
             models = {
-                lstm_ligand_model_path: benchmark_output_path / f"FINE-TUNE_{z}_{case}.tsv",
-                lstm_chembl_model_path: benchmark_output_path / f"PRE-TRAIN_{z}_{case}.tsv",
+                lstm_ligand_model_path: benchmark_output_path
+                / f"FINE-TUNE_{z}_{case}.tsv",
+                lstm_chembl_model_path: benchmark_output_path
+                / f"PRE-TRAIN_{z}_{case}.tsv",
             }
 
             env = Environment(objs=objs, mods=mods, keys=keys)
@@ -93,4 +94,3 @@ if __name__ == "__main__":
             df["Smiles"] = sampling(netG_path=lstm_chembl_model_path, size=SAMPLE_SIZE)
             scores = env(df["Smiles"], is_smiles=True)
             df.to_csv(models[lstm_chembl_model_path], index=False, sep="\t")
-

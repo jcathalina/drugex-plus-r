@@ -6,7 +6,6 @@ import torch
 
 from src.drugexr.data.preprocess import logger
 
-
 # TODO: Export to test module and put large objects into files
 SAMPLE_SMILES = [
     "CC(C)(N)CP(=O)(O)CCCCc1ccc(C#Cc2ccccc2F)cc1",
