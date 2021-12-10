@@ -7,6 +7,8 @@ import torch
 from src.drugexr.data.preprocess import logger
 
 # TODO: Export to test module and put large objects into files
+from src.drugexr.models.predictor import Predictor
+
 SAMPLE_SMILES = [
     "CC(C)(N)CP(=O)(O)CCCCc1ccc(C#Cc2ccccc2F)cc1",
     "c1ccc2c(CC3CNCCC3O)cccc2c1",
@@ -147,6 +149,11 @@ def test_unique():
     unique_indices = unique(arr=sample_smiles_arr)
     x = sample_smiles_arr[unique_indices]
     print(x.shape)
+
+
+def test_predictor_calcs():
+    x = Predictor.calc_physchem(mols=[])
+    print(x)
 
 
 if __name__ == "__main__":

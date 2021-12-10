@@ -58,7 +58,7 @@ if __name__ == "__main__":
     copy2(ROOT_PATH / "src/drugexr/models/drugex_v2.py", root)
     copy2(ROOT_PATH / "src/drugexr/training/train.py", root)
 
-    pr_path: Path = MODEL_PATH / "output/rnn/lstm_chembl"
+    pr_path: Path = MODEL_PATH / "output/rnn/lstm_chembl_T"
     ft_path: Path = MODEL_PATH / "output/rnn/lstm_ligand_T"
 
     voc = Vocabulary(vocabulary_path=PROC_DATA_PATH / "chembl_voc.txt")

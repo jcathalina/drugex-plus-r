@@ -1,9 +1,10 @@
 from RAscore import RAscore_NN, RAscore_XGB
 
 from src.drugexr.config.constants import MODEL_PATH
+from src.drugexr.data.preprocess import logger
 
 NN_MODEL_PATH = MODEL_PATH / "rascore/DNN_chembl_fcfp_counts/model.h5"
-XGB_MODEL_PATH = MODEL_PATH / "rascore/XGB_chembl_ecfp_counts/model.h5"
+XGB_MODEL_PATH = MODEL_PATH / "rascore/XGB_chembl_ecfp_counts/model.pkl"
 
 
 def calculate_score(mol: str, use_xgb_model: bool = False) -> float:
@@ -17,6 +18,7 @@ def calculate_score(mol: str, use_xgb_model: bool = False) -> float:
 
     Returns: A score between 0 and 1 indicating how likely a synthesis route is to be found by the underlying CASP tool (AiZynthFinder).
     """
+    logger.info("SA SCORE HAS BEEN CALLED!")
     scorer = (
         RAscore_XGB.RAScorerXGB(model_path=XGB_MODEL_PATH)
         if use_xgb_model
@@ -26,6 +28,7 @@ def calculate_score(mol: str, use_xgb_model: bool = False) -> float:
     return score
 
 
+# TODO: Extract to dedicated test module
 def test_calc_ra_score():
     omeprazole = "CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC"
     score = calculate_score(mol=omeprazole)

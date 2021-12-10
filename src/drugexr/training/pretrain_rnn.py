@@ -8,7 +8,8 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from src.drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH
+from src.drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH, TEST_RUN
+from src.drugexr.data.preprocess import logger
 from src.drugexr.data_structs.vocabulary import Vocabulary
 from src.drugexr.models.generator import Generator
 
@@ -26,7 +27,7 @@ def guarantee_path(dir_: pathlib.Path) -> pathlib.Path:
     return dir_
 
 
-def pretrain_rnn(is_lstm: bool = True):
+def pretrain_rnn(is_lstm: bool = True, epochs: int = 50, epochs_ft: int = 10, lr: float = 1e-4):
     voc = Vocabulary(vocabulary_path=pathlib.Path(PROC_DATA_PATH / "chembl_voc.txt"))
 
     out_dir = MODEL_PATH / "output/rnn"
@@ -35,18 +36,19 @@ def pretrain_rnn(is_lstm: bool = True):
         pathlib.Path(out_dir).mkdir(parents=True)
 
     if is_lstm:
-        netP_path = out_dir / "lstm_chembl_T"
-        netE_path = out_dir / "lstm_ligand_T"
+        netP_path = out_dir / "lstm_chembl_R"
+        netE_path = out_dir / "lstm_ligand_R"
     else:
-        netP_path = out_dir / "gru_chembl"
-        netE_path = out_dir / "gru_ligand"
+        netP_path = out_dir / "gru_chembl_R"
+        netE_path = out_dir / "gru_ligand_R"
 
     prior = Generator(voc, is_lstm=is_lstm)
     if not os.path.exists(netP_path.with_suffix(".pkg")):
+        logger.info("No pre-existing model found, starting training process...")
         chembl = pd.read_table(PROC_DATA_PATH / "chembl_corpus.txt").Token
         chembl = torch.LongTensor(voc.encode([seq.split(" ") for seq in chembl]))
         chembl = DataLoader(chembl, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
-        prior.fit(chembl, out=netP_path, epochs=50)
+        prior.fit(chembl, out=netP_path, epochs=epochs)
     prior.load_state_dict(torch.load(netP_path.with_suffix(".pkg")))
 
     # explore = model.Generator(voc)
@@ -62,16 +64,18 @@ def pretrain_rnn(is_lstm: bool = True):
     valid = DataLoader(valid, batch_size=BATCH_SIZE, shuffle=True)
     print("Fine tuning progress begins to be trained...")
 
-    prior.fit(train, loader_valid=valid, out=netE_path, epochs=10, lr=lr)
+    prior.fit(train, loader_valid=valid, out=netE_path, epochs=epochs_ft, lr=lr)
     print("Fine tuning progress training is finished...")
 
 
 if __name__ == "__main__":
     opts, args = getopt.getopt(sys.argv[1:], "g:m:")
     OPT = dict(opts)
-    lr = 1e-4
     torch.set_num_threads(1)
     os.environ["CUDA_VISIBLE_DEVICES"] = "0" if "-g" not in OPT else OPT["-g"]
     BATCH_SIZE = 512
     is_lstm = opts["-m"] if "-m" in OPT else True
-    pretrain_rnn(is_lstm=is_lstm)
+
+    epochs = 1 if TEST_RUN else 50
+    epochs_ft = 1 if TEST_RUN else 10
+    pretrain_rnn(is_lstm=is_lstm, epochs=epochs, epochs_ft=epochs_ft)
