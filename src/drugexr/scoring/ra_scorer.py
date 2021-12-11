@@ -1,3 +1,5 @@
+from typing import Optional
+
 from RAscore import RAscore_NN, RAscore_XGB
 
 from src.drugexr.config.constants import MODEL_PATH
@@ -7,7 +9,7 @@ NN_MODEL_PATH = MODEL_PATH / "rascore/DNN_chembl_fcfp_counts/model.h5"
 XGB_MODEL_PATH = MODEL_PATH / "rascore/XGB_chembl_ecfp_counts/model.pkl"
 
 
-def calculate_score(mol: str, use_xgb_model: bool = False) -> float:
+def calculate_score(mol: str, use_xgb_model: bool = False) -> Optional[float]:
     """
     Given a SMILES string, returns a score in [0-1] that indicates how
     likely RA Score predicts it is to find a synthesis route.
@@ -24,7 +26,14 @@ def calculate_score(mol: str, use_xgb_model: bool = False) -> float:
         if use_xgb_model
         else RAscore_NN.RAScorerNN(model_path=NN_MODEL_PATH)
     )
-    score = scorer.predict(smiles=mol)
+
+    try:
+        score = scorer.predict(smiles=mol)
+    except Exception as e:
+        logger.warn(f"'{mol}' is not valid SMILES, skipping...")
+        logger.error(f"Something went wrong, error message: {e}")
+        score = None
+
     return score
 
 
