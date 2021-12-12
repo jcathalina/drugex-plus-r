@@ -1,32 +1,14 @@
-import getopt
-import logging
-import os
 import pathlib
-import sys
 
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from src.drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH, TEST_RUN
-from src.drugexr.data.preprocess import logger
+from src.drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH
 from src.drugexr.data_structs.vocabulary import Vocabulary
 from src.drugexr.models.generator import Generator
 
 
-def guarantee_path(dir_: pathlib.Path) -> pathlib.Path:
-    """
-    TODO: Extract to utils
-    Helper function that guarantees that a path exists by creating all necessary (nested) directories
-    if necessary and returns that path.
-    :param dir_: Path to the directory that needs to be guaranteed
-    :return: Path that was passed to the function, after guaranteeing its existence.
-    """
-    if not pathlib.Path.exists(dir_):
-        pathlib.Path(dir_).mkdir(parents=True)
-    return dir_
-#
-#
 # def pretrain_rnn(is_lstm: bool = True, epochs: int = 50, epochs_ft: int = 10, lr: float = 1e-4):
 #     voc = Vocabulary(vocabulary_path=pathlib.Path(PROC_DATA_PATH / "chembl_voc.txt"))
 #

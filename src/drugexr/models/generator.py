@@ -9,7 +9,7 @@ from src.drugexr.utils import tensor_ops
 
 class Generator(pl.LightningModule):
     def __init__(self, vocabulary, embed_size=128, hidden_size=512, is_lstm=True, lr=1e-3):
-        super(Generator, self).__init__()
+        super().__init__()
         self.voc = vocabulary
         self.embed_size = embed_size
         self.hidden_size = hidden_size
@@ -22,8 +22,8 @@ class Generator(pl.LightningModule):
         self.linear = torch.nn.Linear(hidden_size, vocabulary.size)
         self.optim = torch.optim.Adam(self.parameters(), lr=lr)
 
-    def forward(self, input, h):
-        output = self.embed(input.unsqueeze(-1))
+    def forward(self, x, h):
+        output = self.embed(x.unsqueeze(-1))
         output, h_out = self.rnn(output, h)
         output = self.linear(output).squeeze(1)
         return output, h_out
@@ -150,47 +150,58 @@ class Generator(pl.LightningModule):
                 break
         return sequences
 
-    def fit(
-        self, loader_train, out: pathlib.Path, loader_valid=None, epochs=100, lr=1e-3
-    ):
-        optimizer = torch.optim.Adam(self.parameters(), lr=lr)
-        log = open(out.with_suffix(".log"), "w")
-        best_error = np.inf
-        for epoch in range(epochs):
-            for i, batch in enumerate(loader_train):
-                optimizer.zero_grad()
-                loss_train = self.likelihood(batch)
-                loss_train = -loss_train.mean()
-                loss_train.backward()
-                optimizer.step()
-                if i % 10 == 0 or loader_valid is not None:
-                    seqs = self.sample(len(batch * 2))
-                    ix = tensor_ops.unique(seqs)
-                    seqs = seqs[ix]
-                    smiles, valids = self.voc.check_smiles(seqs)
-                    error = 1 - sum(valids) / len(seqs)
-                    info = "Epoch: %d step: %d error_rate: %.3f loss_train: %.3f" % (
-                        epoch,
-                        i,
-                        error,
-                        loss_train.item(),
-                    )
-                    if loader_valid is not None:
-                        loss_valid, size = 0, 0
-                        for j, batch in enumerate(loader_valid):
-                            size += batch.size(0)
-                            loss_valid += (
-                                -self.likelihood(batch).sum().item()
-                            )
-                        loss_valid = loss_valid / size / self.voc.max_len
-                        if loss_valid < best_error:
-                            torch.save(self.state_dict(), out.with_suffix(".pkg"))
-                            best_error = loss_valid
-                        info += " loss_valid: %.3f" % loss_valid
-                    elif error < best_error:
-                        torch.save(self.state_dict(), out.with_suffix(".pkg"))
-                        best_error = error
-                    print(info, file=log)
-                    for i, smile in enumerate(smiles):
-                        print("%d\t%s" % (valids[i], smile), file=log)
-        log.close()
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return optimizer
+
+    def training_step(self, batch, batch_idx):
+        loss = self.likelihood(batch)
+        loss = -loss.mean()
+        loss.backward()
+        self.log("train_loss", loss)
+        return loss
+
+    # def fit(
+    #     self, loader_train, out: pathlib.Path, loader_valid=None, epochs=100, lr=1e-3
+    # ):
+    #     optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+    #     log = open(out.with_suffix(".log"), "w")
+    #     best_error = np.inf
+    #     for epoch in range(epochs):
+    #         for i, batch in enumerate(loader_train):
+    #             optimizer.zero_grad()
+    #             loss_train = self.likelihood(batch)
+    #             loss_train = -loss_train.mean()
+    #             loss_train.backward()
+    #             optimizer.step()
+    #             if i % 10 == 0 or loader_valid is not None:
+    #                 seqs = self.sample(len(batch * 2))
+    #                 ix = tensor_ops.unique(seqs)
+    #                 seqs = seqs[ix]
+    #                 smiles, valids = self.voc.check_smiles(seqs)
+    #                 error = 1 - sum(valids) / len(seqs)
+    #                 info = "Epoch: %d step: %d error_rate: %.3f loss_train: %.3f" % (
+    #                     epoch,
+    #                     i,
+    #                     error,
+    #                     loss_train.item(),
+    #                 )
+    #                 if loader_valid is not None:
+    #                     loss_valid, size = 0, 0
+    #                     for j, batch in enumerate(loader_valid):
+    #                         size += batch.size(0)
+    #                         loss_valid += (
+    #                             -self.likelihood(batch).sum().item()
+    #                         )
+    #                     loss_valid = loss_valid / size / self.voc.max_len
+    #                     if loss_valid < best_error:
+    #                         torch.save(self.state_dict(), out.with_suffix(".pkg"))
+    #                         best_error = loss_valid
+    #                     info += " loss_valid: %.3f" % loss_valid
+    #                 elif error < best_error:
+    #                     torch.save(self.state_dict(), out.with_suffix(".pkg"))
+    #                     best_error = error
+    #                 print(info, file=log)
+    #                 for i, smile in enumerate(smiles):
+    #                     print("%d\t%s" % (valids[i], smile), file=log)
+    #     log.close()
