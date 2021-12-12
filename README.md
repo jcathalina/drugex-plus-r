@@ -12,6 +12,7 @@ After cloning this repository, make sure you have a conda distribution installed
 ### Installing the environment
 - `conda env create -f environment.yml` or `conda env create -f environment-dev.yml` (for Developers)
 - `conda activate drugexr`
+- `pip install -e .`
 
 # Data Version Control (DVC)
 This project uses DVC to version control large data files and trained models on [DagsHub](https://dagshub.com/naisuu/drugex-plus-r).

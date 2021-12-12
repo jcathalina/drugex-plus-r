@@ -20,4 +20,4 @@ CHEMBL_26_SIZE = 2_000_000  # Approximately.
 
 DEVICE = torch.device("cuda")
 
-TEST_RUN = True
+TEST_RUN = False

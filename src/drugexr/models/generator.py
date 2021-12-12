@@ -2,28 +2,25 @@ import pathlib
 
 import numpy as np
 import torch
-from torch import nn, optim
+import pytorch_lightning as pl
 
-from src.drugexr.config.constants import DEVICE
 from src.drugexr.utils import tensor_ops
 
 
-# TODO: Refactor class code
-class Generator(nn.Module):
-    def __init__(self, voc, embed_size=128, hidden_size=512, is_lstm=True, lr=1e-3):
+class Generator(pl.LightningModule):
+    def __init__(self, vocabulary, embed_size=128, hidden_size=512, is_lstm=True, lr=1e-3):
         super(Generator, self).__init__()
-        self.voc = voc
+        self.voc = vocabulary
         self.embed_size = embed_size
         self.hidden_size = hidden_size
-        self.output_size = voc.size
+        self.output_size = vocabulary.size
 
-        self.embed = nn.Embedding(voc.size, embed_size)
+        self.embed = torch.nn.Embedding(vocabulary.size, embed_size)
         self.is_lstm = is_lstm
-        rnn_layer = nn.LSTM if is_lstm else nn.GRU
+        rnn_layer = torch.nn.LSTM if is_lstm else torch.nn.GRU
         self.rnn = rnn_layer(embed_size, hidden_size, num_layers=3, batch_first=True)
-        self.linear = nn.Linear(hidden_size, voc.size)
-        self.optim = optim.Adam(self.parameters(), lr=lr)
-        self.to(DEVICE)
+        self.linear = torch.nn.Linear(hidden_size, vocabulary.size)
+        self.optim = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, input, h):
         output = self.embed(input.unsqueeze(-1))
@@ -32,18 +29,18 @@ class Generator(nn.Module):
         return output, h_out
 
     def init_h(self, batch_size, labels=None):
-        h = torch.rand(3, batch_size, 512).to(DEVICE)
+        h = torch.rand(3, batch_size, 512)
         if labels is not None:
             h[0, batch_size, 0] = labels
         if self.is_lstm:
-            c = torch.rand(3, batch_size, self.hidden_size).to(DEVICE)
+            c = torch.rand(3, batch_size, self.hidden_size)
         return (h, c) if self.is_lstm else h
 
     def likelihood(self, target):
         batch_size, seq_len = target.size()
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size)
         h = self.init_h(batch_size)
-        scores = torch.zeros(batch_size, seq_len).to(DEVICE)
+        scores = torch.zeros(batch_size, seq_len)
         for step in range(seq_len):
             logits, h = self(x, h)
             logits = logits.log_softmax(dim=-1)
@@ -62,10 +59,10 @@ class Generator(nn.Module):
             self.optim.step()
 
     def sample(self, batch_size):
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size)
         h = self.init_h(batch_size)
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
-        isEnd = torch.zeros(batch_size).bool().to(DEVICE)
+        sequences = torch.zeros(batch_size, self.voc.max_len).long()
+        isEnd = torch.zeros(batch_size).bool()
 
         for step in range(self.voc.max_len):
             logit, h = self(x, h)
@@ -82,27 +79,27 @@ class Generator(nn.Module):
 
     def evolve(self, batch_size, epsilon=0.01, crover=None, mutate=None):
         # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size)
         # Hidden states initialization for exploitation network
         h = self.init_h(batch_size)
         # Hidden states initialization for exploration network
         h1 = self.init_h(batch_size)
         h2 = self.init_h(batch_size)
         # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
+        sequences = torch.zeros(batch_size, self.voc.max_len).long()
         # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool().to(DEVICE)
+        is_end = torch.zeros(batch_size).bool()
 
         for step in range(self.voc.max_len):
             logit, h = self(x, h)
             proba = logit.softmax(dim=-1)
             if crover is not None:
-                ratio = torch.rand(batch_size, 1).to(DEVICE)
+                ratio = torch.rand(batch_size, 1)
                 logit1, h1 = crover(x, h1)
                 proba = proba * ratio + logit1.softmax(dim=-1) * (1 - ratio)
             if mutate is not None:
                 logit2, h2 = mutate(x, h2)
-                is_mutate = (torch.rand(batch_size) < epsilon).to(DEVICE)
+                is_mutate = (torch.rand(batch_size) < epsilon)
                 proba[is_mutate, :] = logit2.softmax(dim=-1)[is_mutate, :]
             # sampling based on output probability distribution
             x = torch.multinomial(proba, 1).view(-1)
@@ -116,15 +113,15 @@ class Generator(nn.Module):
 
     def evolve1(self, batch_size, epsilon=0.01, crover=None, mutate=None):
         # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size)
         # Hidden states initialization for exploitation network
         h = self.init_h(batch_size)
         # Hidden states initialization for exploration network
         h2 = self.init_h(batch_size)
         # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
+        sequences = torch.zeros(batch_size, self.voc.max_len).long()
         # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool().to(DEVICE)
+        is_end = torch.zeros(batch_size).bool()
 
         for step in range(self.voc.max_len):
             is_change = torch.rand(1) < 0.5
@@ -135,7 +132,7 @@ class Generator(nn.Module):
             proba = logit.softmax(dim=-1)
             if mutate is not None:
                 logit2, h2 = mutate(x, h2)
-                ratio = torch.rand(batch_size, 1).to(DEVICE) * epsilon
+                ratio = torch.rand(batch_size, 1) * epsilon
                 proba = (
                     logit.softmax(dim=-1) * (1 - ratio) + logit2.softmax(dim=-1) * ratio
                 )
@@ -156,13 +153,13 @@ class Generator(nn.Module):
     def fit(
         self, loader_train, out: pathlib.Path, loader_valid=None, epochs=100, lr=1e-3
     ):
-        optimizer = optim.Adam(self.parameters(), lr=lr)
+        optimizer = torch.optim.Adam(self.parameters(), lr=lr)
         log = open(out.with_suffix(".log"), "w")
         best_error = np.inf
         for epoch in range(epochs):
             for i, batch in enumerate(loader_train):
                 optimizer.zero_grad()
-                loss_train = self.likelihood(batch.to(DEVICE))
+                loss_train = self.likelihood(batch)
                 loss_train = -loss_train.mean()
                 loss_train.backward()
                 optimizer.step()
@@ -183,7 +180,7 @@ class Generator(nn.Module):
                         for j, batch in enumerate(loader_valid):
                             size += batch.size(0)
                             loss_valid += (
-                                -self.likelihood(batch.to(DEVICE)).sum().item()
+                                -self.likelihood(batch).sum().item()
                             )
                         loss_valid = loss_valid / size / self.voc.max_len
                         if loss_valid < best_error:

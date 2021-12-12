@@ -2,13 +2,16 @@ name: drugexr-dev
 channels:
   - conda-forge
   - defaults
+  - nvidia
+  - pytorch
 dependencies:
   - python=3.7
   - pip
   - rdkit
   - tqdm
-  - pytorch
-  - cudatoolkit=11.3
+  - pytorch::pytorch
+  - nvidia::cudatoolkit=11.3
+  - pytorch-lightning=1.5.3
   - matplotlib
   - seaborn
   - scikit-learn
@@ -25,3 +28,4 @@ dependencies:
     # DEV ONLY
     - Sphinx
     - isort
+    - mlflow

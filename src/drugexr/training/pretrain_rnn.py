@@ -69,6 +69,10 @@ def pretrain_rnn(is_lstm: bool = True, epochs: int = 50, epochs_ft: int = 10, lr
 
 
 if __name__ == "__main__":
+    import mlflow
+
+    mlflow.pytorch.autolog()
+
     opts, args = getopt.getopt(sys.argv[1:], "g:m:")
     OPT = dict(opts)
     torch.set_num_threads(1)
