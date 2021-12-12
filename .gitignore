@@ -24,3 +24,6 @@ data/raw/*.sdf.gz
 
 # logs
 *.log
+
+# env variables
+.env

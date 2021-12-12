@@ -29,3 +29,4 @@ dependencies:
     - Sphinx
     - isort
     - mlflow
+    - python-dotenv
