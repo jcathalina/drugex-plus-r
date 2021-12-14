@@ -4,11 +4,12 @@ import numpy as np
 import torch
 import pytorch_lightning as pl
 
+
 from src.drugexr.utils import tensor_ops
 
 
 class Generator(pl.LightningModule):
-    def __init__(self, vocabulary, embed_size=128, hidden_size=512, is_lstm=True, lr=1e-3):
+    def __init__(self, vocabulary, embed_size=128, hidden_size=512, lr=1e-3):
         super().__init__()
         self.voc = vocabulary
         self.embed_size = embed_size
@@ -16,11 +17,9 @@ class Generator(pl.LightningModule):
         self.output_size = vocabulary.size
 
         self.embed = torch.nn.Embedding(vocabulary.size, embed_size)
-        self.is_lstm = is_lstm
-        rnn_layer = torch.nn.LSTM if is_lstm else torch.nn.GRU
+        rnn_layer = torch.nn.LSTM
         self.rnn = rnn_layer(embed_size, hidden_size, num_layers=3, batch_first=True)
         self.linear = torch.nn.Linear(hidden_size, vocabulary.size)
-        self.optim = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, x, h):
         output = self.embed(x.unsqueeze(-1))
@@ -32,9 +31,8 @@ class Generator(pl.LightningModule):
         h = torch.rand(3, batch_size, 512)
         if labels is not None:
             h[0, batch_size, 0] = labels
-        if self.is_lstm:
-            c = torch.rand(3, batch_size, self.hidden_size)
-        return (h, c) if self.is_lstm else h
+        c = torch.rand(3, batch_size, self.hidden_size)
+        return (h, c)
 
     def likelihood(self, target):
         batch_size, seq_len = target.size()
@@ -157,7 +155,7 @@ class Generator(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         loss = self.likelihood(batch)
         loss = -loss.mean()
-        loss.backward()
+        # loss.backward()
         self.log("train_loss", loss)
         return loss
 
