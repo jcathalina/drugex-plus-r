@@ -5,7 +5,6 @@ import rdkit.Chem
 import torch
 
 from src.drugexr.data.preprocess import logger
-
 # TODO: Export to test module and put large objects into files
 from src.drugexr.models.predictor import Predictor
 

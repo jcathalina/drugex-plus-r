@@ -1,5 +1,5 @@
-import torch
 import pytorch_lightning as pl
+import torch
 
 from src.drugexr.config.constants import DEVICE
 
@@ -166,15 +166,16 @@ class Generator(pl.LightningModule):
 
 
 if __name__ == "__main__":
-    from src.drugexr.data_structs.vocabulary import Vocabulary
-    from torch.utils.data import DataLoader, random_split
-    from src.drugexr.config import constants as c
     from pathlib import Path
-    from dotenv import load_dotenv
 
+    import mlflow
     import numpy as np
     import pandas as pd
-    import mlflow
+    from dotenv import load_dotenv
+    from torch.utils.data import DataLoader, random_split
+
+    from src.drugexr.config import constants as c
+    from src.drugexr.data_structs.vocabulary import Vocabulary
 
     load_dotenv()
 
@@ -187,7 +188,13 @@ if __name__ == "__main__":
         print("metrics: {}".format(r.data.metrics))
         print("tags: {}".format(tags))
 
-    def train_lstm(corpus_path: Path, vocabulary_path: Path, dev: bool = False, n_workers: int = 1, epochs: int = 1000):
+    def train_lstm(
+        corpus_path: Path,
+        vocabulary_path: Path,
+        dev: bool = False,
+        n_workers: int = 1,
+        epochs: int = 1000,
+    ):
         """
         Function to configure training of the LSTM that will be used as a Prior / Agent
         TODO: Update this docstring when it's done.
@@ -220,8 +227,22 @@ if __name__ == "__main__":
         print(train_samples, val_samples)
         chembl_train, chembl_val = random_split(chembl, [900, 100])
 
-        train_loader = DataLoader(chembl_train, batch_size=64, shuffle=True, drop_last=True, pin_memory=True, num_workers=n_workers)
-        val_loader = DataLoader(chembl_val, batch_size=64, shuffle=True, drop_last=True, pin_memory=True, num_workers=n_workers)
+        train_loader = DataLoader(
+            chembl_train,
+            batch_size=64,
+            shuffle=True,
+            drop_last=True,
+            pin_memory=True,
+            num_workers=n_workers,
+        )
+        val_loader = DataLoader(
+            chembl_val,
+            batch_size=64,
+            shuffle=True,
+            drop_last=True,
+            pin_memory=True,
+            num_workers=n_workers,
+        )
 
         print("Creating Trainer...")
         trainer = pl.Trainer(gpus=1, log_every_n_steps=1, max_epochs=epochs)
@@ -232,8 +253,12 @@ if __name__ == "__main__":
 
         print("Starting run...")
         with mlflow.start_run() as run:
-            trainer.fit(model=generator, train_dataloaders=train_loader, val_dataloaders=val_loader)
-    
+            trainer.fit(
+                model=generator,
+                train_dataloaders=train_loader,
+                val_dataloaders=val_loader,
+            )
+
         print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
 
     def sample(nr_samples: int, vocabulary_path: Path, model_ckpt: Path):
@@ -245,9 +270,10 @@ if __name__ == "__main__":
         decoded_samples = [vocabulary.decode(sample) for sample in encoded_samples]
         print(decoded_samples)
 
-
-    train_lstm(corpus_path=c.PROC_DATA_PATH / "chembl_corpus.txt",
-                vocabulary_path=c.PROC_DATA_PATH/ "chembl_voc.txt",
-                dev=True,
-                n_workers=1,
-                epochs=100)
+    train_lstm(
+        corpus_path=c.PROC_DATA_PATH / "chembl_corpus.txt",
+        vocabulary_path=c.PROC_DATA_PATH / "chembl_voc.txt",
+        dev=True,
+        n_workers=1,
+        epochs=100,
+    )

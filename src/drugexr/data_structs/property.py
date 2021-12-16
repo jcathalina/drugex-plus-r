@@ -3,7 +3,7 @@ from rdkit.Chem import AllChem, Crippen, Descriptors, Lipinski
 from rdkit.Chem.GraphDescriptors import BertzCT
 from rdkit.Chem.QED import qed
 
-from src.drugexr.scoring import sa_scorer, ra_scorer
+from src.drugexr.scoring import ra_scorer, sa_scorer
 
 
 class Property:
