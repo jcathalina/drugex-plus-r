@@ -163,11 +163,24 @@ if __name__ == "__main__":
     from src.drugexr.data_structs.vocabulary import Vocabulary
     from torch.utils.data import DataLoader
     from src.drugexr.config import constants as c
-
     from pathlib import Path
-    import pandas as pd
+    from dotenv import load_dotenv
 
-    def train_lstm(corpus_path: Path, vocabulary_path: Path, dev: bool = False, n_workers: int = 1, use_mlflow: bool = True, epochs: int = 1000):
+    import pandas as pd
+    import mlflow
+
+    load_dotenv()
+
+    def print_auto_logged_info(r):
+        tags = {k: v for k, v in r.data.tags.items() if not k.startswith("mlflow.")}
+        # artifacts = [f.path for f in MlflowClient().list_artifacts(r.info.run_id, "model")]
+        print("run_id: {}".format(r.info.run_id))
+        # print("artifacts: {}".format(artifacts))
+        print("params: {}".format(r.data.params))
+        print("metrics: {}".format(r.data.metrics))
+        print("tags: {}".format(tags))
+
+    def train_lstm(corpus_path: Path, vocabulary_path: Path, dev: bool = False, n_workers: int = 1, epochs: int = 1000):
         """
         Function to configure training of the LSTM that will be used as a Prior / Agent
         TODO: Update this docstring when it's done.
@@ -176,16 +189,6 @@ if __name__ == "__main__":
             from src.drugexr.config import constants as c
 
             corpus_path = c.PROC_DATA_PATH / "chembl_corpus_DEV_1000.txt"
-
-        if use_mlflow:
-            import mlflow
-            from dotenv import load_dotenv
-
-            load_dotenv()
-
-            mlflow.start_run()
-            mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
-            mlflow.pytorch.autolog()
 
         vocabulary = Vocabulary(vocabulary_path=vocabulary_path)
         generator = Generator(vocabulary=vocabulary)
@@ -201,9 +204,15 @@ if __name__ == "__main__":
             num_workers=n_workers,
         )
 
-        trainer = pl.Trainer(gpus=1, log_every_n_steps=1)
+        trainer = pl.Trainer(gpus=1, log_every_n_steps=1, max_epochs=epochs)
 
-        trainer.fit(model=generator, train_dataloaders=chembl)
+        mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
+        mlflow.pytorch.autolog()
+
+        with mlflow.start_run() as run:
+            trainer.fit(model=generator, train_dataloaders=chembl)
+
+        print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
 
     def sample(nr_samples: int, vocabulary_path: Path, model_ckpt: Path):
         vocabulary = Vocabulary(vocabulary_path=vocabulary_path)
@@ -218,4 +227,4 @@ if __name__ == "__main__":
     train_lstm(corpus_path=c.PROC_DATA_PATH / "chembl_corpus.txt",
                 vocabulary_path=c.PROC_DATA_PATH/ "chembl_voc.txt",
                 n_workers=16,
-                epochs=100)
+                epochs=10)
