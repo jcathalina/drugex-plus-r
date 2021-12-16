@@ -158,14 +158,21 @@ class Generator(pl.LightningModule):
         self.log("train_loss", loss)
         return loss
 
+    def validation_step(self, batch, batch_idx):
+        loss = self.likelihood(batch)
+        loss = -loss.mean()
+        self.log("val_loss", loss)
+        return loss
+
 
 if __name__ == "__main__":
     from src.drugexr.data_structs.vocabulary import Vocabulary
-    from torch.utils.data import DataLoader
+    from torch.utils.data import DataLoader, random_split
     from src.drugexr.config import constants as c
     from pathlib import Path
     from dotenv import load_dotenv
 
+    import numpy as np
     import pandas as pd
     import mlflow
 
@@ -190,28 +197,43 @@ if __name__ == "__main__":
 
             corpus_path = c.PROC_DATA_PATH / "chembl_corpus_DEV_1000.txt"
 
+        print("Loading vocabulary...")
         vocabulary = Vocabulary(vocabulary_path=vocabulary_path)
+        print("Creating Generator instance...")
         generator = Generator(vocabulary=vocabulary)
 
+        print("Creating DataLoader...")
         chembl = pd.read_table(corpus_path).Token  # Make this more generic?
         chembl = torch.LongTensor(vocabulary.encode([seq.split(" ") for seq in chembl]))
-        chembl = DataLoader(
-            chembl,
-            batch_size=512,
-            shuffle=True,
-            drop_last=True,
-            pin_memory=True,
-            num_workers=n_workers,
-        )
+        # chembl = DataLoader(
+        #     chembl,
+        #     batch_size=512,
+        #     shuffle=True,
+        #     drop_last=True,
+        #     pin_memory=True,
+        #     num_workers=n_workers,
+        # )
 
+        n_samples = len(chembl)
+        train_samples = np.floor(0.9 * n_samples)
+        val_samples = n_samples - train_samples
+        print(train_samples, val_samples)
+        chembl_train, chembl_val = random_split(chembl, [900, 100])
+
+        train_loader = DataLoader(chembl_train, batch_size=64, shuffle=True, drop_last=True, pin_memory=True, num_workers=n_workers)
+        val_loader = DataLoader(chembl_val, batch_size=64, shuffle=True, drop_last=True, pin_memory=True, num_workers=n_workers)
+
+        print("Creating Trainer...")
         trainer = pl.Trainer(gpus=1, log_every_n_steps=1, max_epochs=epochs)
 
+        print("Initiating ML Flow tracking...")
         mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
         mlflow.pytorch.autolog()
 
+        print("Starting run...")
         with mlflow.start_run() as run:
-            trainer.fit(model=generator, train_dataloaders=chembl)
-
+            trainer.fit(model=generator, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    
         print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
 
     def sample(nr_samples: int, vocabulary_path: Path, model_ckpt: Path):
@@ -226,5 +248,6 @@ if __name__ == "__main__":
 
     train_lstm(corpus_path=c.PROC_DATA_PATH / "chembl_corpus.txt",
                 vocabulary_path=c.PROC_DATA_PATH/ "chembl_voc.txt",
-                n_workers=16,
-                epochs=10)
+                dev=True,
+                n_workers=1,
+                epochs=100)

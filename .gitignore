@@ -27,3 +27,7 @@ data/raw/*.sdf.gz
 
 # env variables
 .env
+
+# Lightning and ML Flow tracking
+lightning_logs
+artifacts

@@ -51,34 +51,4 @@ from src.drugexr.models.generator import Generator
 
 
 if __name__ == "__main__":
-    import mlflow
-    from dotenv import load_dotenv
-
-    load_dotenv()
-
-    mlflow.start_run()
-    mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
-
-    voc = Vocabulary(vocabulary_path=pathlib.Path(PROC_DATA_PATH / "chembl_voc.txt"))
-    out_dir = MODEL_PATH / "output/rnn"
-    netP_path = out_dir / "lstm_chembl_R"
-    netE_path = out_dir / "lstm_ligand_R"
-    prior = Generator(vocabulary=voc)
-    chembl = pd.read_table(PROC_DATA_PATH / "chembl_corpus_DEV_1000.txt").Token
-    chembl = torch.LongTensor(voc.encode([seq.split(" ") for seq in chembl]))
-    chembl = DataLoader(chembl, batch_size=512, shuffle=True, drop_last=True)
-
-    mlflow.pytorch.autolog()
-
-    prior.fit(chembl, out=netP_path, epochs=5)
-
-    # opts, args = getopt.getopt(sys.argv[1:], "g:m:")
-    # OPT = dict(opts)
-    # torch.set_num_threads(1)
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "0" if "-g" not in OPT else OPT["-g"]
-    # BATCH_SIZE = 512
-    # is_lstm = opts["-m"] if "-m" in OPT else True
-    #
-    # epochs = 1 if TEST_RUN else 50
-    # epochs_ft = 1 if TEST_RUN else 10
-    # pretrain_rnn(is_lstm=is_lstm, epochs=epochs, epochs_ft=epochs_ft)
+    pass
