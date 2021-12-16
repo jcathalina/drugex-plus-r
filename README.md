@@ -17,6 +17,7 @@ After cloning this repository, make sure you have a conda distribution installed
 #### Mamba
 Mamba is a drop-in replacement for conda, it's much faster at resolving environments and is recommended.
 You can install it by running `conda install -c conda-forge mamba`.
+In case you want to use this from the start, replace `conda` with `mamba` in the instructions above.
 
 # Data Version Control (DVC)
 This project uses DVC to version control large data files and trained models on [DagsHub](https://dagshub.com/naisuu/drugex-plus-r).

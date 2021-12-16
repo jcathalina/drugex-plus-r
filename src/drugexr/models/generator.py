@@ -1,11 +1,7 @@
-import pathlib
-
-import numpy as np
 import torch
 import pytorch_lightning as pl
 
-
-from src.drugexr.utils import tensor_ops
+from src.drugexr.config.constants import DEVICE
 
 
 class Generator(pl.LightningModule):
@@ -28,17 +24,17 @@ class Generator(pl.LightningModule):
         return output, h_out
 
     def init_h(self, batch_size, labels=None):
-        h = torch.rand(3, batch_size, 512)
+        h = torch.rand(3, batch_size, 512).to(DEVICE)
         if labels is not None:
             h[0, batch_size, 0] = labels
-        c = torch.rand(3, batch_size, self.hidden_size)
+        c = torch.rand(3, batch_size, self.hidden_size).to(DEVICE)
         return (h, c)
 
     def likelihood(self, target):
         batch_size, seq_len = target.size()
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
         h = self.init_h(batch_size)
-        scores = torch.zeros(batch_size, seq_len)
+        scores = torch.zeros(batch_size, seq_len).to(DEVICE)
         for step in range(seq_len):
             logits, h = self(x, h)
             logits = logits.log_softmax(dim=-1)
@@ -60,18 +56,18 @@ class Generator(pl.LightningModule):
         x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size)
         h = self.init_h(batch_size)
         sequences = torch.zeros(batch_size, self.voc.max_len).long()
-        isEnd = torch.zeros(batch_size).bool()
+        is_end = torch.zeros(batch_size).bool()
 
         for step in range(self.voc.max_len):
             logit, h = self(x, h)
             proba = logit.softmax(dim=-1)
             x = torch.multinomial(proba, 1).view(-1)
-            x[isEnd] = self.voc.tk2ix["EOS"]
+            x[is_end] = self.voc.tk2ix["EOS"]
             sequences[:, step] = x
 
             end_token = x == self.voc.tk2ix["EOS"]
-            isEnd = torch.ge(isEnd + end_token, 1)
-            if (isEnd == 1).all():
+            is_end = torch.ge(is_end + end_token, 1)
+            if (is_end == 1).all():
                 break
         return sequences
 
@@ -155,51 +151,24 @@ class Generator(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         loss = self.likelihood(batch)
         loss = -loss.mean()
-        # loss.backward()
         self.log("train_loss", loss)
         return loss
 
-    # def fit(
-    #     self, loader_train, out: pathlib.Path, loader_valid=None, epochs=100, lr=1e-3
-    # ):
-    #     optimizer = torch.optim.Adam(self.parameters(), lr=lr)
-    #     log = open(out.with_suffix(".log"), "w")
-    #     best_error = np.inf
-    #     for epoch in range(epochs):
-    #         for i, batch in enumerate(loader_train):
-    #             optimizer.zero_grad()
-    #             loss_train = self.likelihood(batch)
-    #             loss_train = -loss_train.mean()
-    #             loss_train.backward()
-    #             optimizer.step()
-    #             if i % 10 == 0 or loader_valid is not None:
-    #                 seqs = self.sample(len(batch * 2))
-    #                 ix = tensor_ops.unique(seqs)
-    #                 seqs = seqs[ix]
-    #                 smiles, valids = self.voc.check_smiles(seqs)
-    #                 error = 1 - sum(valids) / len(seqs)
-    #                 info = "Epoch: %d step: %d error_rate: %.3f loss_train: %.3f" % (
-    #                     epoch,
-    #                     i,
-    #                     error,
-    #                     loss_train.item(),
-    #                 )
-    #                 if loader_valid is not None:
-    #                     loss_valid, size = 0, 0
-    #                     for j, batch in enumerate(loader_valid):
-    #                         size += batch.size(0)
-    #                         loss_valid += (
-    #                             -self.likelihood(batch).sum().item()
-    #                         )
-    #                     loss_valid = loss_valid / size / self.voc.max_len
-    #                     if loss_valid < best_error:
-    #                         torch.save(self.state_dict(), out.with_suffix(".pkg"))
-    #                         best_error = loss_valid
-    #                     info += " loss_valid: %.3f" % loss_valid
-    #                 elif error < best_error:
-    #                     torch.save(self.state_dict(), out.with_suffix(".pkg"))
-    #                     best_error = error
-    #                 print(info, file=log)
-    #                 for i, smile in enumerate(smiles):
-    #                     print("%d\t%s" % (valids[i], smile), file=log)
-    #     log.close()
+
+if __name__ == "__main__":
+    from src.drugexr.data_structs.vocabulary import Vocabulary
+    from src.drugexr.config import constants as c
+    from torch.utils.data import DataLoader
+
+    import pandas as pd
+
+    vocabulary = Vocabulary(vocabulary_path=c.PROC_DATA_PATH / "chembl_voc.txt")
+    generator = Generator(vocabulary=vocabulary)
+
+    chembl = pd.read_table(c.PROC_DATA_PATH / "chembl_corpus_DEV_1000.txt").Token
+    chembl = torch.LongTensor(vocabulary.encode([seq.split(" ") for seq in chembl]))
+    chembl = DataLoader(chembl, batch_size=512, shuffle=True, drop_last=True, pin_memory=True, num_workers=1)
+
+    trainer = pl.Trainer(gpus=1, log_every_n_steps=1)
+
+    trainer.fit(model=generator, train_dataloaders=chembl)
