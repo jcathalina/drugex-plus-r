@@ -12,10 +12,13 @@ class Generator(pl.LightningModule):
         self.hidden_size = hidden_size
         self.output_size = vocabulary.size
 
-        self.embed = torch.nn.Embedding(vocabulary.size, embed_size)
+        # TODO: Extract sample(...) so that we don't have to explicit call .to(device) in lightning module...
+        self.embed = torch.nn.Embedding(vocabulary.size, embed_size).to(DEVICE)
         rnn_layer = torch.nn.LSTM
-        self.rnn = rnn_layer(embed_size, hidden_size, num_layers=3, batch_first=True)
-        self.linear = torch.nn.Linear(hidden_size, vocabulary.size)
+        self.rnn = rnn_layer(
+            embed_size, hidden_size, num_layers=3, batch_first=True
+        ).to(DEVICE)
+        self.linear = torch.nn.Linear(hidden_size, vocabulary.size).to(DEVICE)
 
     def forward(self, x, h):
         output = self.embed(x.unsqueeze(-1))
@@ -53,10 +56,11 @@ class Generator(pl.LightningModule):
             self.optim.step()
 
     def sample(self, batch_size):
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size)
+        # TODO: Maybe extract sample to take a generator model instead of being a method?
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
         h = self.init_h(batch_size)
-        sequences = torch.zeros(batch_size, self.voc.max_len).long()
-        is_end = torch.zeros(batch_size).bool()
+        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
+        is_end = torch.zeros(batch_size).bool().to(DEVICE)
 
         for step in range(self.voc.max_len):
             logit, h = self(x, h)
@@ -93,7 +97,7 @@ class Generator(pl.LightningModule):
                 proba = proba * ratio + logit1.softmax(dim=-1) * (1 - ratio)
             if mutate is not None:
                 logit2, h2 = mutate(x, h2)
-                is_mutate = (torch.rand(batch_size) < epsilon)
+                is_mutate = torch.rand(batch_size) < epsilon
                 proba[is_mutate, :] = logit2.softmax(dim=-1)[is_mutate, :]
             # sampling based on output probability distribution
             x = torch.multinomial(proba, 1).view(-1)
@@ -157,18 +161,61 @@ class Generator(pl.LightningModule):
 
 if __name__ == "__main__":
     from src.drugexr.data_structs.vocabulary import Vocabulary
-    from src.drugexr.config import constants as c
     from torch.utils.data import DataLoader
+    from src.drugexr.config import constants as c
 
+    from pathlib import Path
     import pandas as pd
 
-    vocabulary = Vocabulary(vocabulary_path=c.PROC_DATA_PATH / "chembl_voc.txt")
-    generator = Generator(vocabulary=vocabulary)
+    def train_lstm(corpus_path: Path, vocabulary_path: Path, dev: bool = False, n_workers: int = 1, use_mlflow: bool = True, epochs: int = 1000):
+        """
+        Function to configure training of the LSTM that will be used as a Prior / Agent
+        TODO: Update this docstring when it's done.
+        """
+        if dev:
+            from src.drugexr.config import constants as c
 
-    chembl = pd.read_table(c.PROC_DATA_PATH / "chembl_corpus_DEV_1000.txt").Token
-    chembl = torch.LongTensor(vocabulary.encode([seq.split(" ") for seq in chembl]))
-    chembl = DataLoader(chembl, batch_size=512, shuffle=True, drop_last=True, pin_memory=True, num_workers=1)
+            corpus_path = c.PROC_DATA_PATH / "chembl_corpus_DEV_1000.txt"
 
-    trainer = pl.Trainer(gpus=1, log_every_n_steps=1)
+        if use_mlflow:
+            import mlflow
+            from dotenv import load_dotenv
 
-    trainer.fit(model=generator, train_dataloaders=chembl)
+            load_dotenv()
+
+            mlflow.start_run()
+            mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
+            mlflow.pytorch.autolog()
+
+        vocabulary = Vocabulary(vocabulary_path=vocabulary_path)
+        generator = Generator(vocabulary=vocabulary)
+
+        chembl = pd.read_table(corpus_path).Token  # Make this more generic?
+        chembl = torch.LongTensor(vocabulary.encode([seq.split(" ") for seq in chembl]))
+        chembl = DataLoader(
+            chembl,
+            batch_size=512,
+            shuffle=True,
+            drop_last=True,
+            pin_memory=True,
+            num_workers=n_workers,
+        )
+
+        trainer = pl.Trainer(gpus=1, log_every_n_steps=1)
+
+        trainer.fit(model=generator, train_dataloaders=chembl)
+
+    def sample(nr_samples: int, vocabulary_path: Path, model_ckpt: Path):
+        vocabulary = Vocabulary(vocabulary_path=vocabulary_path)
+        generator = Generator(vocabulary=vocabulary)
+        generator.load_from_checkpoint(model_ckpt, vocabulary=vocabulary)
+
+        encoded_samples = generator.sample(nr_samples)
+        decoded_samples = [vocabulary.decode(sample) for sample in encoded_samples]
+        print(decoded_samples)
+
+
+    train_lstm(corpus_path=c.PROC_DATA_PATH / "chembl_corpus.txt",
+                vocabulary_path=c.PROC_DATA_PATH/ "chembl_voc.txt",
+                n_workers=16,
+                epochs=100)
