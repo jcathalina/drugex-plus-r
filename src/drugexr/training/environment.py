@@ -48,7 +48,7 @@ def random_forest_cv(X, y, X_ind, y_ind, reg: bool = False, n_splits: int = 5):
 
     cvs = np.zeros(y.shape)
     inds = np.zeros(y_ind.shape)
-    for i, (trained, validated) in enumerate(folds):
+    for trained, validated in folds:
         model = alg(n_estimators=1000, n_jobs=-1)
         model.fit(
             X[trained],
@@ -176,8 +176,7 @@ def main():
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-    targets = ["CHEMBL226"]
-    # targets = ['CHEMBL226', 'CHEMBL251', 'CHEMBL240']
+    targets = ['CHEMBL226', 'CHEMBL251', 'CHEMBL240']
 
     for reg in [False, True]:
         for target in targets:

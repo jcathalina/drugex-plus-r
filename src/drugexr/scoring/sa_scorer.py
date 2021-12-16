@@ -127,5 +127,5 @@ def process_mols(mols: List[rdchem.Mol]) -> None:
 
         score = calculate_score(mol=mol)
 
-        smiles = Chem.MolToSmiles(mol)
+        smiles = Chem.MolToSmiles(mol=mol)
         print(smiles + "\t" + mol.GetProp("_Name") + "\t%3f" % score)
