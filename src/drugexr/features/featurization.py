@@ -50,7 +50,7 @@ def preprocess(
     tokens = []
     if requires_clean:
         smiles = set()
-        for smile in tqdm(df):
+        for smile in tqdm(df, desc="Cleaning molecules"):
             try:
                 smile = cleaning.clean_mol(smile, is_isomeric=is_isomeric)
                 smiles.add(Chem.CanonSmiles(smile))
@@ -58,7 +58,7 @@ def preprocess(
                 logger.warning("Parsing Error: ", e)
     else:
         smiles = df.values
-    for smile in tqdm(smiles):
+    for smile in tqdm(smiles, desc="Tokenizing SMILES"):
         token = voc.tokenize(smile)
         # Only collect the organic molecules
         if {"C", "c"}.isdisjoint(token):
@@ -96,7 +96,7 @@ def get_mols_from_sdf(is_isomeric: bool, raw_data_filepath: Path) -> List[str]:
     inf = gzip.open(raw_data_filepath)
     fsuppl = Chem.ForwardSDMolSupplier(inf)
     smiles = []
-    for mol in tqdm(fsuppl, total=CHEMBL_26_SIZE):
+    for mol in tqdm(fsuppl, total=CHEMBL_26_SIZE, desc="Processing ChEMBL molecules"):
         try:
             smiles.append(Chem.MolToSmiles(mol, is_isomeric))
         except Exception as e:

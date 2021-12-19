@@ -1,0 +1,12 @@
+stages:
+  featurization:
+    cmd: python src/drugexr/features/featurization.py
+    deps:
+    - data/raw/chembl_26.sdf.gz
+    - data/raw/ligand_raw.tsv
+    - src/drugexr/features/featurization.py
+    outs:
+    - data/processed/chembl_corpus.txt
+    - data/processed/chembl_voc.txt
+    - data/processed/ligand_corpus.txt
+    - data/processed/ligand_voc.txt
