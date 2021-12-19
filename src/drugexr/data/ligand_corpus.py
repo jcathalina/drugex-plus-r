@@ -12,7 +12,7 @@ from src.drugexr.data_structs.vocabulary import Vocabulary
 from src.drugexr.utils.tensor_ops import random_split_frac
 
 
-class ChemblCorpus(pl.LightningDataModule):
+class LigandCorpus(pl.LightningDataModule):
     def __init__(
         self,
         vocabulary: Vocabulary,
@@ -25,31 +25,31 @@ class ChemblCorpus(pl.LightningDataModule):
         self.batch_size = batch_size
 
     def setup(self, stage: Optional[str] = None):
-        chembl_full = pd.read_table(self.data_dir / "chembl_corpus.txt")["Token"]
-        chembl_test = chembl_full.sample(frac=0.2, random_state=42)
-        chembl_full = chembl_full.drop(
-            chembl_test.index
+        ligand_full = pd.read_table(self.data_dir / "chembl_corpus.txt")["Token"]
+        ligand_test = ligand_full.sample(frac=0.2, random_state=42)
+        ligand_full = ligand_full.drop(
+            ligand_test.index
         )  # Make sure the test set is excluded
 
         if stage == "fit" or stage is None:
-            chembl_train, chembl_val = random_split_frac(dataset=chembl_full)
-            self.chembl_train = torch.LongTensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_train])
+            ligand_train, ligand_val = random_split_frac(dataset=ligand_full)
+            self.ligand_train = torch.LongTensor(
+                self.vocabulary.encode([seq.split(" ") for seq in ligand_train])
             )
-            self.chembl_val = torch.LongTensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_val])
+            self.ligand_val = torch.LongTensor(
+                self.vocabulary.encode([seq.split(" ") for seq in ligand_val])
             )
 
         if stage == "test" or stage is None:
-            self.chembl_test = torch.LongTensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_test])
+            self.ligand_test = torch.LongTensor(
+                self.vocabulary.encode([seq.split(" ") for seq in ligand_test])
             )
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        return DataLoader(self.chembl_train, batch_size=self.batch_size)
+        return DataLoader(self.ligand_train, batch_size=self.batch_size)
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.chembl_val, batch_size=self.batch_size)
+        return DataLoader(self.ligand_val, batch_size=self.batch_size)
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.chembl_test, batch_size=self.batch_size)
+        return DataLoader(self.ligand_test, batch_size=self.batch_size)
