@@ -12,9 +12,9 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import KFold, StratifiedKFold
 from tqdm import tqdm
 
-from src.drugexr.config.constants import MODEL_PATH, RAW_DATA_PATH
-from src.drugexr.models.predictor import Predictor
-from src.drugexr.utils.tensor_ops import print_auto_logged_info
+from drugexr.config.constants import MODEL_PATH, RAW_DATA_PATH
+from drugexr.models.predictor import Predictor
+from drugexr.utils.tensor_ops import print_auto_logged_info
 
 
 class AlgorithmType(Enum):

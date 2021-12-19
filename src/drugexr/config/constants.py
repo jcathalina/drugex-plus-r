@@ -18,6 +18,6 @@ MAX_TOKEN_LEN = 100
 # data properties
 CHEMBL_26_SIZE = 2_000_000  # Approximately.
 
-DEVICE = torch.device("cuda")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 TEST_RUN = False

@@ -5,7 +5,7 @@ from typing import Optional
 
 from RAscore import RAscore_NN, RAscore_XGB
 
-from src.drugexr.config.constants import MODEL_PATH
+from drugexr.config.constants import MODEL_PATH
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)

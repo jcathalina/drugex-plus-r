@@ -8,9 +8,9 @@ from pytorch_lightning.utilities.types import (EVAL_DATALOADERS,
                                                TRAIN_DATALOADERS)
 from torch.utils.data.dataloader import DataLoader
 
-import src.drugexr.config.constants as const
-from src.drugexr.data_structs.vocabulary import Vocabulary
-from src.drugexr.utils.tensor_ops import random_split_frac
+import drugexr.config.constants as const
+from drugexr.data_structs.vocabulary import Vocabulary
+from drugexr.utils.tensor_ops import random_split_frac
 
 
 class LigandCorpus(pl.LightningDataModule):

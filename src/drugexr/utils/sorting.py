@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from rdkit import DataStructs
 
-from src.drugexr.config.constants import DEVICE
+from drugexr.config.constants import DEVICE
 
 
 def dominate(ind1: np.ndarray, ind2: np.ndarray):

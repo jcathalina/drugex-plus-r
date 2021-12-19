@@ -7,11 +7,11 @@ import pandas as pd
 from rdkit import Chem
 from tqdm import tqdm
 
-from src.drugexr.config.constants import (CHEMBL_26_SIZE, MAX_TOKEN_LEN,
+from drugexr.config.constants import (CHEMBL_26_SIZE, MAX_TOKEN_LEN,
                                           MIN_TOKEN_LEN, PROC_DATA_PATH,
                                           RAW_DATA_PATH, ROOT_PATH)
-from src.drugexr.data_structs.vocabulary import Vocabulary
-from src.drugexr.utils import cleaning
+from drugexr.data_structs.vocabulary import Vocabulary
+from drugexr.utils import cleaning
 
 logging.basicConfig(filename=ROOT_PATH / "logs/preprocess.log", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def preprocess(
         requires_clean (bool): If the molecule is required to be clean, the charge metal will be
                 removed and only the largest fragment will be kept.
         is_isomeric (bool): If the molecules in the dataset keep conformational information. If not,
-                the conformational tokens (e.g. @@, @, \, /) will be removed.
+                the conformational tokens (e.g. @@, @, \, /) will be removed. False by default.
     """
     if corpus_type == "chembl":
         df = get_mols_from_sdf(is_isomeric, raw_data_filepath)

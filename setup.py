@@ -33,8 +33,12 @@ setup(
     license=about.__license__,
     download_url="https://github.com/naisuu/drugex-plus-r",
     python_requires=">=3.7",
-    platforms=["Linux"],
-    packages=find_packages(),
+    platforms=["Linux", "Windows"],
+    packages=find_packages(
+        where="src",
+        include=["drugexr"]
+        ),
+    package_dir={"": "src"},
     entry_points={
         "console_scripts": [
             "download_raw_chembl=drugexr.tools.download_raw_chembl:download_chembl_data",

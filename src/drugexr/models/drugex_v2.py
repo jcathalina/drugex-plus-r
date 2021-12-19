@@ -4,9 +4,9 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.drugexr.config.constants import DEVICE
-from src.drugexr.models.pg_learner import PGLearner
-from src.drugexr.utils import tensor_ops
+from drugexr.config.constants import DEVICE
+from drugexr.models.pg_learner import PGLearner
+from drugexr.utils import tensor_ops
 
 
 class DrugExV2(PGLearner):

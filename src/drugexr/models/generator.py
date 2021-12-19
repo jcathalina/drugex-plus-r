@@ -1,8 +1,8 @@
 import pytorch_lightning as pl
 import torch
 
-from src.drugexr.config.constants import DEVICE
-from src.drugexr.utils.tensor_ops import print_auto_logged_info
+from drugexr.config.constants import DEVICE
+from drugexr.utils.tensor_ops import print_auto_logged_info
 
 
 class Generator(pl.LightningModule):

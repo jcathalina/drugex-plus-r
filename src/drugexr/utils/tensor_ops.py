@@ -5,9 +5,9 @@ import rdkit.Chem
 import torch
 from torch.utils.data.dataset import Dataset, random_split
 
-from src.drugexr.data.preprocess import logger
+from drugexr.features.featurization import logger
 # TODO: Export to test module and put large objects into files
-from src.drugexr.models.predictor import Predictor
+from drugexr.models.predictor import Predictor
 
 SAMPLE_SMILES = [
     "CC(C)(N)CP(=O)(O)CCCCc1ccc(C#Cc2ccccc2F)cc1",

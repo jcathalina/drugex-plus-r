@@ -4,9 +4,9 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from src.drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH
-from src.drugexr.data_structs.vocabulary import Vocabulary
-from src.drugexr.models.generator import Generator
+from drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH
+from drugexr.data_structs.vocabulary import Vocabulary
+from drugexr.models.generator import Generator
 
 # def pretrain_rnn(is_lstm: bool = True, epochs: int = 50, epochs_ft: int = 10, lr: float = 1e-4):
 #     voc = Vocabulary(vocabulary_path=pathlib.Path(PROC_DATA_PATH / "chembl_voc.txt"))

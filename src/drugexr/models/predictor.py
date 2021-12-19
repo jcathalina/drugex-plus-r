@@ -6,7 +6,7 @@ import numpy as np
 from rdkit import DataStructs
 from rdkit.Chem import AllChem
 
-from src.drugexr.data_structs.property import Property
+from drugexr.data_structs.property import Property
 
 
 class Predictor:

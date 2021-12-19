@@ -3,9 +3,9 @@ from pathlib import Path
 
 import torch
 
-import src.drugexr.utils.tensor_ops
-from src.drugexr.data_structs.environment import Environment
-from src.drugexr.models.generator import Generator
+from drugexr.utils import tensor_ops
+from drugexr.data_structs.environment import Environment
+from drugexr.models.generator import Generator
 
 
 class PGLearner(object):
@@ -55,7 +55,7 @@ class PGLearner(object):
                 print("\n----------\nEPOCH %d\n----------" % epoch)
                 self.policy_gradient()
                 seqs = self.agent.sample(self.n_samples)
-                ix = src.drugexr.utils.tensor_ops.unique(seqs)
+                ix = tensor_ops.unique(seqs)
                 smiles = [self.agent.voc.decode(s) for s in seqs[ix]]
                 scores = self.env(smiles, is_smiles=True)
 

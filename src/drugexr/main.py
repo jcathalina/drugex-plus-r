@@ -5,12 +5,12 @@ import torch
 from rdkit import rdBase
 from tqdm import tqdm
 
-from src.drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH, TEST_RUN
-from src.drugexr.data_structs.environment import Environment
-from src.drugexr.data_structs.vocabulary import Vocabulary
-from src.drugexr.models.generator import Generator
-from src.drugexr.models.predictor import Predictor
-from src.drugexr.utils.normalization import ClippedScore
+from drugexr.config.constants import MODEL_PATH, PROC_DATA_PATH, TEST_RUN
+from drugexr.data_structs.environment import Environment
+from drugexr.data_structs.vocabulary import Vocabulary
+from drugexr.models.generator import Generator
+from drugexr.models.predictor import Predictor
+from drugexr.utils.normalization import ClippedScore
 
 rdBase.DisableLog("rdApp.error")
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"

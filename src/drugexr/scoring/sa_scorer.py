@@ -1,20 +1,20 @@
-#
-# calculation of synthetic accessibility score as described in:
-#
-# Estimation of Synthetic Accessibility Score of Drug-like Molecules based on Molecular Complexity and Fragment Contributions
-# Peter Ertl and Ansgar Schuffenhauer
-# Journal of Cheminformatics 1:8 (2009)
-# http://www.jcheminf.com/content/1/1/8
-#
-# several small modifications to the original paper are included
-# particularly slightly different formula for macrocyclic penalty
-# and taking into account also molecule symmetry (fingerprint density)
-#
-# for a set of 10k diverse molecules the agreement between the original method
-# as implemented in PipelinePilot and this implementation is r2 = 0.97
-#
-# Peter Ertl & Greg Landrum, september 2013
+"""
+calculation of synthetic accessibility score as described in:
 
+Estimation of Synthetic Accessibility Score of Drug-like Molecules based on Molecular Complexity and Fragment Contributions
+Peter Ertl and Ansgar Schuffenhauer
+Journal of Cheminformatics 1:8 (2009)
+http://www.jcheminf.com/content/1/1/8
+
+several small modifications to the original paper are included
+particularly slightly different formula for macrocyclic penalty
+and taking into account also molecule symmetry (fingerprint density)
+
+for a set of 10k diverse molecules the agreement between the original method
+as implemented in PipelinePilot and this implementation is r2 = 0.97
+
+Peter Ertl & Greg Landrum, september 2013
+"""
 
 import gzip
 import math
