@@ -3,11 +3,9 @@ from typing import List
 import numpy as np
 import rdkit.Chem
 import torch
-from torch._C import T
-from torch.utils.data.dataset import Dataset, Subset, random_split
+from torch.utils.data.dataset import Dataset, random_split
 
 from src.drugexr.data.preprocess import logger
-
 # TODO: Export to test module and put large objects into files
 from src.drugexr.models.predictor import Predictor
 
@@ -141,9 +139,7 @@ def canonicalize_smiles_list(smiles: List[str]) -> List[str]:
     return canon_smiles
 
 
-def random_split_frac(
-    dataset: Dataset, train_frac: float = 0.9, val_frac: float = 0.1
-) -> List[Subset[T @ random_split]]:
+def random_split_frac(dataset: Dataset, train_frac: float = 0.9, val_frac: float = 0.1):
     """
     Helper wrapper function around PyTorch's random_split method that allows you to pass
     fractions instead of integers.
@@ -156,6 +152,16 @@ def random_split_frac(
     len_1 = np.floor(train_frac * dataset_size)
     len_2 = dataset_size - len_1
     return random_split(dataset=dataset, lengths=[len_1, len_2])
+
+
+def print_auto_logged_info(r):
+    tags = {k: v for k, v in r.data.tags.items() if not k.startswith("mlflow.")}
+    # artifacts = [f.path for f in MlflowClient().list_artifacts(r.info.run_id, "model")]
+    print("run_id: {}".format(r.info.run_id))
+    # print("artifacts: {}".format(artifacts))
+    print("params: {}".format(r.data.params))
+    print("metrics: {}".format(r.data.metrics))
+    print("tags: {}".format(tags))
 
 
 def test_canonicalize_smiles_list():

@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torch
 
 from src.drugexr.config.constants import DEVICE
+from src.drugexr.utils.tensor_ops import print_auto_logged_info
 
 
 class Generator(pl.LightningModule):
@@ -178,15 +179,6 @@ if __name__ == "__main__":
     from src.drugexr.data_structs.vocabulary import Vocabulary
 
     load_dotenv()
-
-    def print_auto_logged_info(r):
-        tags = {k: v for k, v in r.data.tags.items() if not k.startswith("mlflow.")}
-        # artifacts = [f.path for f in MlflowClient().list_artifacts(r.info.run_id, "model")]
-        print("run_id: {}".format(r.info.run_id))
-        # print("artifacts: {}".format(artifacts))
-        print("params: {}".format(r.data.params))
-        print("metrics: {}".format(r.data.metrics))
-        print("tags: {}".format(tags))
 
     def train_lstm(
         corpus_path: Path,

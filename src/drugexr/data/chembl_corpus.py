@@ -4,7 +4,8 @@ from typing import List, Optional
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
+from pytorch_lightning.utilities.types import (EVAL_DATALOADERS,
+                                               TRAIN_DATALOADERS)
 from torch.utils.data.dataloader import DataLoader
 
 import src.drugexr.config.constants as const

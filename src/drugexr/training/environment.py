@@ -10,9 +10,11 @@ import pandas as pd
 from rdkit import Chem
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import KFold, StratifiedKFold
+from tqdm import tqdm
 
 from src.drugexr.config.constants import MODEL_PATH, RAW_DATA_PATH
 from src.drugexr.models.predictor import Predictor
+from src.drugexr.utils.tensor_ops import print_auto_logged_info
 
 
 class AlgorithmType(Enum):
@@ -49,8 +51,8 @@ def random_forest_cv(X, y, X_ind, y_ind, reg: bool = False, n_splits: int = 5):
 
     cvs = np.zeros(y.shape)
     inds = np.zeros(y_ind.shape)
-    for trained, validated in folds:
-        model = alg(n_estimators=1000, n_jobs=-1)
+    for trained, validated in tqdm(iterable=folds, desc="RF CV Outer Loop"):
+        model = alg(n_estimators=1000, n_jobs=-1, verbose=1)
         model.fit(
             X[trained],
             y[trained],
@@ -89,7 +91,14 @@ def train_rf(X, y, out_filepath: Path, reg: bool = False) -> None:
     else:
         model = RandomForestClassifier(n_estimators=1000, n_jobs=-1)
 
-    model.fit(X, y, sample_weight=[1 if v >= 4 else 0.1 for v in y])
+    mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
+    mlflow.sklearn.autolog()
+
+    print("Starting run...")
+    with mlflow.start_run() as run:
+        model.fit(X, y, sample_weight=[1 if v >= 4 else 0.1 for v in y])
+
+    print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
     joblib.dump(value=model, filename=out_filepath, compress=3)
 
 
@@ -162,6 +171,9 @@ def single_task(
 
 def main():
     import os
+    from dotenv import load_dotenv
+
+    load_dotenv()
 
     # TODO: Extract to config
 
