@@ -3,8 +3,11 @@ from typing import List
 import numpy as np
 import rdkit.Chem
 import torch
+from torch._C import T
+from torch.utils.data.dataset import Dataset, Subset, random_split
 
 from src.drugexr.data.preprocess import logger
+
 # TODO: Export to test module and put large objects into files
 from src.drugexr.models.predictor import Predictor
 
@@ -136,6 +139,23 @@ def canonicalize_smiles_list(smiles: List[str]) -> List[str]:
             logger.warn(f"{smi} is not a valid Molecule: {e}, skipping...")
             continue
     return canon_smiles
+
+
+def random_split_frac(
+    dataset: Dataset, train_frac: float = 0.9, val_frac: float = 0.1
+) -> List[Subset[T @ random_split]]:
+    """
+    Helper wrapper function around PyTorch's random_split method that allows you to pass
+    fractions instead of integers.
+    """
+    if train_frac + val_frac != 1:
+        raise ValueError("The fractions have to add up to 1.")
+
+    dataset_size = len(dataset)
+
+    len_1 = np.floor(train_frac * dataset_size)
+    len_2 = dataset_size - len_1
+    return random_split(dataset=dataset, lengths=[len_1, len_2])
 
 
 def test_canonicalize_smiles_list():

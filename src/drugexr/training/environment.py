@@ -1,9 +1,10 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Tuple
+from typing import List, Tuple
 
 import joblib
+import mlflow
 import numpy as np
 import pandas as pd
 from rdkit import Chem
@@ -93,10 +94,10 @@ def train_rf(X, y, out_filepath: Path, reg: bool = False) -> None:
 
 
 def single_task(
-    feat=None,
+    feat: str = None,
     alg: AlgorithmType = AlgorithmType.RF,
     ligand_path: Path = None,
-    pair=None,
+    pair: List[str] = None,
     reg: bool = False,
     is_extra: bool = True,
     px_threshold: float = 6.5,
@@ -176,16 +177,15 @@ def main():
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-    targets = ['CHEMBL226', 'CHEMBL251', 'CHEMBL240']
+    targets = ["CHEMBL226", "CHEMBL251", "CHEMBL240"]
 
-    for reg in [False, True]:
-        for target in targets:
-            single_task(
-                feat=target,
-                ligand_path=RAW_DATA_PATH / "ligand_raw.tsv",
-                pair=pair,
-                reg=reg,
-            )
+    for target in targets:
+        single_task(
+            feat=target,
+            ligand_path=RAW_DATA_PATH / "ligand_raw.tsv",
+            pair=pair,
+            reg=True,
+        )
 
 
 if __name__ == "__main__":

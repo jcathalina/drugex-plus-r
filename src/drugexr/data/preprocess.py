@@ -1,15 +1,20 @@
 import gzip
 import logging
-import pathlib
+from pathlib import Path
 from typing import List
 
 import pandas as pd
 from rdkit import Chem
 from tqdm import tqdm
 
-from src.drugexr.config.constants import (CHEMBL_26_SIZE, MAX_TOKEN_LEN,
-                                          MIN_TOKEN_LEN, PROC_DATA_PATH,
-                                          RAW_DATA_PATH, ROOT_PATH)
+from src.drugexr.config.constants import (
+    CHEMBL_26_SIZE,
+    MAX_TOKEN_LEN,
+    MIN_TOKEN_LEN,
+    PROC_DATA_PATH,
+    RAW_DATA_PATH,
+    ROOT_PATH,
+)
 from src.drugexr.data_structs.vocabulary import Vocabulary
 from src.drugexr.utils import cleaning
 
@@ -18,17 +23,19 @@ logger = logging.getLogger(__name__)
 
 
 def preprocess(
-    raw_data_filepath: pathlib.Path,
-    destdir: pathlib.Path,
+    raw_data_filepath: Path,
+    destdir: Path,
     corpus_type: str,
     requires_clean: bool = True,
     is_isomeric: bool = False,
 ):
-    """Constructing dataset with SMILES-based molecules, each molecules will be decomposed
+    """
+    This method constructs a dataset with molecules represented as SMILES. Each molecule will be decomposed
     into a series of tokens. In the end, all the tokens will be put into one set as vocabulary.
+
     Arguments:
-        raw_data_filepath (pathlib.Path): The file path of input, either .sdf file or tab-delimited file
-        destdir (pathlib.Path): The file path to write the created files to.
+        raw_data_filepath (Path): The file path of input, either .sdf file or tab-delimited file
+        destdir (Path): The file path to write the created files to.
         corpus_type (str): type of the file to be processed and written. Can be 'chembl' or 'ligand'.
         requires_clean (bool): If the molecule is required to be clean, the charge metal will be
                 removed and only the largest fragment will be kept.
@@ -89,7 +96,7 @@ def write_corpus(canon_smiles, outfile, tokens):
     corpus_df.to_csv(path_or_buf=outfile, sep="\t", index=False)
 
 
-def get_mols_from_sdf(is_isomeric: bool, raw_data_filepath: pathlib.Path) -> List[str]:
+def get_mols_from_sdf(is_isomeric: bool, raw_data_filepath: Path) -> List[str]:
     """Handle sdf file with RDkit"""
     inf = gzip.open(raw_data_filepath)
     fsuppl = Chem.ForwardSDMolSupplier(inf)
