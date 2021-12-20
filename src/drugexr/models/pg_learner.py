@@ -3,9 +3,9 @@ from pathlib import Path
 
 import torch
 
-from drugexr.utils import tensor_ops
 from drugexr.data_structs.environment import Environment
 from drugexr.models.generator import Generator
+from drugexr.utils import tensor_ops
 
 
 class PGLearner(object):

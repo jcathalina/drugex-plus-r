@@ -1,7 +1,10 @@
+from typing import Optional
 import pytorch_lightning as pl
 import torch
 
-from drugexr.config.constants import DEVICE
+import logging
+from drugexr.data.chembl_corpus import ChemblCorpus
+
 from drugexr.utils.tensor_ops import print_auto_logged_info
 
 
@@ -12,14 +15,12 @@ class Generator(pl.LightningModule):
         self.embed_size = embed_size
         self.hidden_size = hidden_size
         self.output_size = vocabulary.size
+        self.lr = lr
 
-        # TODO: Extract sample(...) so that we don't have to explicit call .to(device) in lightning module...
-        self.embed = torch.nn.Embedding(vocabulary.size, embed_size).to(DEVICE)
-        rnn_layer = torch.nn.LSTM
-        self.rnn = rnn_layer(
-            embed_size, hidden_size, num_layers=3, batch_first=True
-        ).to(DEVICE)
-        self.linear = torch.nn.Linear(hidden_size, vocabulary.size).to(DEVICE)
+        self.embed = torch.nn.Embedding(vocabulary.size, embed_size, device=self.device)
+        self.rnn = torch.nn.LSTM(embed_size, hidden_size, num_layers=3, batch_first=True, device=self.device)
+        self.linear = torch.nn.Linear(hidden_size, vocabulary.size, device=self.device)
+        self.automatic_optimization = False
 
     def forward(self, x, h):
         output = self.embed(x.unsqueeze(-1))
@@ -28,17 +29,17 @@ class Generator(pl.LightningModule):
         return output, h_out
 
     def init_h(self, batch_size, labels=None):
-        h = torch.rand(3, batch_size, 512).to(DEVICE)
+        h = torch.rand(3, batch_size, 512, device=self.device)
         if labels is not None:
             h[0, batch_size, 0] = labels
-        c = torch.rand(3, batch_size, self.hidden_size).to(DEVICE)
+        c = torch.rand(3, batch_size, self.hidden_size, device=self.device)
         return (h, c)
 
     def likelihood(self, target):
         batch_size, seq_len = target.size()
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size, device=self.device)
         h = self.init_h(batch_size)
-        scores = torch.zeros(batch_size, seq_len).to(DEVICE)
+        scores = torch.zeros(batch_size, seq_len, device=self.device)
         for step in range(seq_len):
             logits, h = self(x, h)
             logits = logits.log_softmax(dim=-1)
@@ -47,21 +48,23 @@ class Generator(pl.LightningModule):
             x = target[:, step]
         return scores
 
-    def PGLoss(self, loader):
-        for seq, reward in loader:
-            self.zero_grad()
-            score = self.likelihood(seq)
+    def policy_gradient_loss(self, loader: DataLoader) -> None:
+        """ """
+        opt = self.optimizers()
+        for sequence, reward in loader:
+            opt.zero_grad()
+            score = self.likelihood(sequence)
             loss = score * reward
             loss = -loss.mean()
-            loss.backward()
-            self.optim.step()
+            self.manual_backward(loss)
+            opt.step()
 
     def sample(self, batch_size):
         # TODO: Maybe extract sample to take a generator model instead of being a method?
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size, device=self.device)
         h = self.init_h(batch_size)
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
-        is_end = torch.zeros(batch_size).bool().to(DEVICE)
+        sequences = torch.zeros(batch_size, self.voc.max_len, device=self.device).long()
+        is_end = torch.zeros(batch_size, device=self.device).bool()
 
         for step in range(self.voc.max_len):
             logit, h = self(x, h)
@@ -76,51 +79,23 @@ class Generator(pl.LightningModule):
                 break
         return sequences
 
-    def evolve(self, batch_size, epsilon=0.01, crover=None, mutate=None):
+    def evolve(
+        self,
+        batch_size: int,
+        epsilon: float = 0.01,
+        crover: Optional["Generator"] = None,
+        mutate: Optional["Generator"] = None,
+    ):
         # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size)
-        # Hidden states initialization for exploitation network
-        h = self.init_h(batch_size)
-        # Hidden states initialization for exploration network
-        h1 = self.init_h(batch_size)
-        h2 = self.init_h(batch_size)
-        # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long()
-        # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool()
-
-        for step in range(self.voc.max_len):
-            logit, h = self(x, h)
-            proba = logit.softmax(dim=-1)
-            if crover is not None:
-                ratio = torch.rand(batch_size, 1)
-                logit1, h1 = crover(x, h1)
-                proba = proba * ratio + logit1.softmax(dim=-1) * (1 - ratio)
-            if mutate is not None:
-                logit2, h2 = mutate(x, h2)
-                is_mutate = torch.rand(batch_size) < epsilon
-                proba[is_mutate, :] = logit2.softmax(dim=-1)[is_mutate, :]
-            # sampling based on output probability distribution
-            x = torch.multinomial(proba, 1).view(-1)
-
-            is_end |= x == self.voc.tk2ix["EOS"]
-            x[is_end] = self.voc.tk2ix["EOS"]
-            sequences[:, step] = x
-            if is_end.all():
-                break
-        return sequences
-
-    def evolve1(self, batch_size, epsilon=0.01, crover=None, mutate=None):
-        # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size)
+        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size, device=self.device)
         # Hidden states initialization for exploitation network
         h = self.init_h(batch_size)
         # Hidden states initialization for exploration network
         h2 = self.init_h(batch_size)
         # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long()
+        sequences = torch.zeros(batch_size, self.voc.max_len, device=self.device).long()
         # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool()
+        is_end = torch.zeros(batch_size, device=self.device).bool()
 
         for step in range(self.voc.max_len):
             is_change = torch.rand(1) < 0.5
@@ -131,7 +106,7 @@ class Generator(pl.LightningModule):
             proba = logit.softmax(dim=-1)
             if mutate is not None:
                 logit2, h2 = mutate(x, h2)
-                ratio = torch.rand(batch_size, 1) * epsilon
+                ratio = torch.rand(batch_size, 1, device=self.device) * epsilon
                 proba = (
                     logit.softmax(dim=-1) * (1 - ratio) + logit2.softmax(dim=-1) * ratio
                 )
@@ -150,13 +125,17 @@ class Generator(pl.LightningModule):
         return sequences
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
     def training_step(self, batch, batch_idx):
+        opt = self.optimizers()
+        opt.zero_grad()
         loss = self.likelihood(batch)
         loss = -loss.mean()
+        self.manual_backward(loss)
         self.log("train_loss", loss)
+        opt.step()
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -196,59 +175,54 @@ if __name__ == "__main__":
 
             corpus_path = c.PROC_DATA_PATH / "chembl_corpus_DEV_1000.txt"
 
-        print("Loading vocabulary...")
+        logging.info("Loading vocabulary...")
         vocabulary = Vocabulary(vocabulary_path=vocabulary_path)
-        print("Creating Generator instance...")
+        logging.info("Creating Generator instance...")
         generator = Generator(vocabulary=vocabulary)
 
-        print("Creating DataLoader...")
-        chembl = pd.read_table(corpus_path).Token  # Make this more generic?
-        chembl = torch.LongTensor(vocabulary.encode([seq.split(" ") for seq in chembl]))
-        # chembl = DataLoader(
-        #     chembl,
-        #     batch_size=512,
+        # logging.info("Creating DataLoader...")
+        # chembl = pd.read_table(corpus_path).Token  # Make this more generic?
+        # chembl = torch.LongTensor(vocabulary.encode([seq.split(" ") for seq in chembl]))
+
+        # n_samples = len(chembl)
+        # train_samples = np.floor(0.9 * n_samples)
+        # val_samples = n_samples - train_samples
+        # print(train_samples, val_samples)
+        # chembl_train, chembl_val = random_split(chembl, [900, 100])
+
+        # train_loader = DataLoader(
+        #     chembl_train,
+        #     batch_size=64,
+        #     shuffle=True,
+        #     drop_last=True,
+        #     pin_memory=True,
+        #     num_workers=n_workers,
+        # )
+        # val_loader = DataLoader(
+        #     chembl_val,
+        #     batch_size=64,
         #     shuffle=True,
         #     drop_last=True,
         #     pin_memory=True,
         #     num_workers=n_workers,
         # )
 
-        n_samples = len(chembl)
-        train_samples = np.floor(0.9 * n_samples)
-        val_samples = n_samples - train_samples
-        print(train_samples, val_samples)
-        chembl_train, chembl_val = random_split(chembl, [900, 100])
+        logging.info("Creating Trainer...")
+        trainer = pl.Trainer(gpus=1, log_every_n_steps=50, max_epochs=epochs, fast_dev_run=True)
 
-        train_loader = DataLoader(
-            chembl_train,
-            batch_size=64,
-            shuffle=True,
-            drop_last=True,
-            pin_memory=True,
-            num_workers=n_workers,
-        )
-        val_loader = DataLoader(
-            chembl_val,
-            batch_size=64,
-            shuffle=True,
-            drop_last=True,
-            pin_memory=True,
-            num_workers=n_workers,
-        )
-
-        print("Creating Trainer...")
-        trainer = pl.Trainer(gpus=1, log_every_n_steps=1, max_epochs=epochs)
-
-        print("Initiating ML Flow tracking...")
+        logging.info("Initiating ML Flow tracking...")
         mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
         mlflow.pytorch.autolog()
 
-        print("Starting run...")
+        datamodule = ChemblCorpus(n_workers=n_workers)
+        # datamodule.prepare_data()
+        datamodule.setup(stage="fit")
+
+        logging.info("Starting run...")
         with mlflow.start_run() as run:
             trainer.fit(
                 model=generator,
-                train_dataloaders=train_loader,
-                val_dataloaders=val_loader,
+                datamodule=datamodule
             )
 
         print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
@@ -266,6 +240,6 @@ if __name__ == "__main__":
         corpus_path=c.PROC_DATA_PATH / "chembl_corpus.txt",
         vocabulary_path=c.PROC_DATA_PATH / "chembl_voc.txt",
         dev=True,
-        n_workers=1,
+        n_workers=8,
         epochs=100,
     )

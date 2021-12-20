@@ -34,10 +34,7 @@ setup(
     download_url="https://github.com/naisuu/drugex-plus-r",
     python_requires=">=3.7",
     platforms=["Linux", "Windows"],
-    packages=find_packages(
-        where="src",
-        include=["drugexr"]
-        ),
+    packages=find_packages(where="src", include=["drugexr"]),
     package_dir={"": "src"},
     entry_points={
         "console_scripts": [

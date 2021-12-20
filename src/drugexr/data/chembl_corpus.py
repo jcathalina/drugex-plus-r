@@ -18,19 +18,26 @@ class ChemblCorpus(pl.LightningDataModule):
         self,
         vocabulary: Vocabulary,
         data_dir: Path = const.PROC_DATA_PATH,
-        batch_size: int = 32,
+        batch_size: int = 512,
+        n_workers: int = 1,
     ):
         super().__init__()
         self.vocabulary = vocabulary
         self.data_dir = data_dir
         self.batch_size = batch_size
+        self.n_workers = n_workers
 
     def setup(self, stage: Optional[str] = None):
         chembl_full = pd.read_table(self.data_dir / "chembl_corpus.txt")["Token"]
-        chembl_test = chembl_full.sample(frac=0.2, random_state=42)
-        chembl_full = chembl_full.drop(
-            chembl_test.index
-        )  # Make sure the test set is excluded
+
+        if stage == "test" or stage is None:
+            chembl_test = chembl_full.sample(frac=0.2, random_state=42)
+            chembl_full = chembl_full.drop(
+                chembl_test.index
+            )  # Make sure the test set is excluded
+            self.chembl_test = torch.LongTensor(
+                self.vocabulary.encode([seq.split(" ") for seq in chembl_test])
+            )
 
         if stage == "fit" or stage is None:
             chembl_train, chembl_val = random_split_frac(dataset=chembl_full)
@@ -41,16 +48,32 @@ class ChemblCorpus(pl.LightningDataModule):
                 self.vocabulary.encode([seq.split(" ") for seq in chembl_val])
             )
 
-        if stage == "test" or stage is None:
-            self.chembl_test = torch.LongTensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_test])
-            )
-
     def train_dataloader(self) -> TRAIN_DATALOADERS:
-        return DataLoader(self.chembl_train, batch_size=self.batch_size)
+        return DataLoader(
+            self.chembl_train,
+            batch_size=self.batch_size,
+            shuffle=True,
+            drop_last=True,
+            pin_memory=True,
+            num_workers=self.n_workers,
+        )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.chembl_val, batch_size=self.batch_size)
+        return DataLoader(
+            self.chembl_val,
+            batch_size=self.batch_size,
+            shuffle=True,
+            drop_last=True,
+            pin_memory=True,
+            num_workers=self.n_workers,
+        )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(self.chembl_test, batch_size=self.batch_size)
+        return DataLoader(
+            self.chembl_test,
+            batch_size=self.batch_size,
+            shuffle=True,
+            drop_last=True,
+            pin_memory=True,
+            num_workers=self.n_workers,
+        )

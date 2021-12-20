@@ -27,10 +27,15 @@ class LigandCorpus(pl.LightningDataModule):
 
     def setup(self, stage: Optional[str] = None):
         ligand_full = pd.read_table(self.data_dir / "chembl_corpus.txt")["Token"]
-        ligand_test = ligand_full.sample(frac=0.2, random_state=42)
-        ligand_full = ligand_full.drop(
-            ligand_test.index
-        )  # Make sure the test set is excluded
+
+        if stage == "test" or stage is None:
+            ligand_test = ligand_full.sample(frac=0.2, random_state=42)
+            ligand_full = ligand_full.drop(
+                ligand_test.index
+            )  # Make sure the test set is excluded
+            self.ligand_test = torch.LongTensor(
+                self.vocabulary.encode([seq.split(" ") for seq in ligand_test])
+            )
 
         if stage == "fit" or stage is None:
             ligand_train, ligand_val = random_split_frac(dataset=ligand_full)
@@ -39,11 +44,6 @@ class LigandCorpus(pl.LightningDataModule):
             )
             self.ligand_val = torch.LongTensor(
                 self.vocabulary.encode([seq.split(" ") for seq in ligand_val])
-            )
-
-        if stage == "test" or stage is None:
-            self.ligand_test = torch.LongTensor(
-                self.vocabulary.encode([seq.split(" ") for seq in ligand_test])
             )
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:

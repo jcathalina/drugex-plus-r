@@ -41,7 +41,7 @@ class DrugExV2(PGLearner):
         seqs = []
         start = time.time()
         for _ in range(self.replay):
-            seq = self.agent.evolve1(
+            seq = self.agent.evolve(
                 self.batch_size, epsilon=epsilon, crover=crover, mutate=self.prior
             )
             seqs.append(seq)

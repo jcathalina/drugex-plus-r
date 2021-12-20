@@ -171,6 +171,7 @@ def single_task(
 
 def main():
     import os
+
     from dotenv import load_dotenv
 
     load_dotenv()

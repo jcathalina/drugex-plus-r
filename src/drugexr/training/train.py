@@ -7,8 +7,8 @@ from shutil import copy2
 
 import torch
 
-from drugexr.config.constants import (MODEL_PATH, PROC_DATA_PATH,
-                                          ROOT_PATH, TEST_RUN)
+from drugexr.config.constants import (MODEL_PATH, PROC_DATA_PATH, ROOT_PATH,
+                                      TEST_RUN)
 from drugexr.data_structs.environment import Environment
 from drugexr.data_structs.vocabulary import Vocabulary
 from drugexr.models.drugex_v2 import DrugExV2
@@ -26,24 +26,23 @@ if __name__ == "__main__":
     scheme = OPT["-s"] if "-s" in OPT else "PR"
 
     # construct the environment with three predictors
-    # keys = ['A1', 'A2A', 'ERG']
-    keys = ["A1"]
+    keys = ["A1", "A2A", "ERG"]
     A1 = Predictor(MODEL_PATH / f"output/single/RF_{z}_CHEMBL226.pkg", type_=z)
-    # A2A = Predictor('output/env/RF_%s_CHEMBL251.pkg' % z, type=z)
-    # ERG = Predictor('output/env/RF_%s_CHEMBL240.pkg' % z, type=z)
+    A2A = Predictor(MODEL_PATH / f"output/single/RF_{z}_CHEMBL251.pkg", type_=z)
+    ERG = Predictor(MODEL_PATH / f"output/single/RF_{z}_CHEMBL240.pkg", type_=z)
 
     # Chose the desirability function
-    # objs = [A1, A2A, ERG]
-    objs = [A1]
+    objs = [A1, A2A, ERG]
+    n_objs = len(objs)
 
     if scheme == "WS":
         mod1 = normalization.ClippedScore(lower_x=3, upper_x=10)
         mod2 = normalization.ClippedScore(lower_x=10, upper_x=3)
-        ths = [0.5] * len(objs)  # 3
+        ths = [0.5] * n_objs
     else:
         mod1 = normalization.ClippedScore(lower_x=3, upper_x=6.5)
         mod2 = normalization.ClippedScore(lower_x=10, upper_x=6.5)
-        ths = [0.99] * len(objs)  # 3
+        ths = [0.99] * n_objs
 
     mods = [mod1, mod1, mod2] if case == "OBJ3" else [mod2, mod1, mod2]
     env = Environment(objs=objs, mods=mods, keys=keys, ths=ths)
