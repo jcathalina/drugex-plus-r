@@ -52,4 +52,5 @@ setup(
         "Programming Language :: Python :: 3 :: Only"
         "Programming Language :: Python :: 3.7"
     ],
+    install_requires=["torch", "scikit-learn==0.22.1", "numpy", "pandas", "rdkit", "mlflow", "python-dotenv", "joblib", "tqdm"],
 )

@@ -106,7 +106,7 @@ def similarity_sort(swarm, fps, is_gpu=False):
         rank (np.array): m-d vector as the index of well-ranked solutions.
     """
     if is_gpu:
-        swarm = torch.Tensor(swarm).to(DEVICE)
+        swarm = torch.tensor(swarm, device=DEVICE)
         fronts = gpu_non_dominated_sort(swarm)
     else:
         fronts = cpu_non_dominated_sort(swarm)

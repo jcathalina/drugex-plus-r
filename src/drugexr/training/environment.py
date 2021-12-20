@@ -176,8 +176,6 @@ def main():
 
     load_dotenv()
 
-    # TODO: Extract to config
-
     pair = [
         "Target_ChEMBL_ID",
         "Smiles",

@@ -1,7 +1,10 @@
+from typing import List
+
 import numpy as np
 import pandas as pd
 from rdkit import Chem
 
+from drugexr.models.drugex_r import RewardScheme
 from drugexr.models.predictor import Predictor
 from drugexr.utils.fingerprints import get_fingerprint
 from drugexr.utils.sorting import nsgaii_sort, similarity_sort
@@ -24,7 +27,9 @@ class Environment:
         self.ths = ths if ths is not None else [0.99] * len(keys)
         self.keys = keys
 
-    def __call__(self, mols=None, is_smiles=False, is_modified=True):
+    def __call__(
+        self, mols: List[str] = None, is_smiles: bool = False, is_modified: bool = True
+    ):
         """
         Calculate the scores of all objectives for all of samples
         Args:
@@ -68,7 +73,7 @@ class Environment:
                 fps.append(None)
         return fps
 
-    def calc_reward(self, smiles, scheme="WS"):
+    def calc_reward(self, smiles, scheme: RewardScheme = "WS"):
         """
         Calculate the single value as the reward for each molecule used for reinforcement learning
         Args:

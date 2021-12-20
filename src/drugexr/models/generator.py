@@ -1,16 +1,23 @@
+import logging
 from typing import Optional
+
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
 
-import logging
 from drugexr.data.chembl_corpus import ChemblCorpus
-
+from drugexr.data_structs.vocabulary import Vocabulary
 from drugexr.utils.tensor_ops import print_auto_logged_info
 
 
 class Generator(pl.LightningModule):
-    def __init__(self, vocabulary, embed_size=128, hidden_size=512, lr=1e-3):
+    def __init__(
+        self,
+        vocabulary: Vocabulary,
+        embed_size: int = 128,
+        hidden_size: int = 512,
+        lr: float = 1e-3,
+    ):
         super().__init__()
         self.voc = vocabulary
         self.embed_size = embed_size
@@ -19,7 +26,9 @@ class Generator(pl.LightningModule):
         self.lr = lr
 
         self.embed = torch.nn.Embedding(vocabulary.size, embed_size, device=self.device)
-        self.rnn = torch.nn.LSTM(embed_size, hidden_size, num_layers=3, batch_first=True, device=self.device)
+        self.rnn = torch.nn.LSTM(
+            embed_size, hidden_size, num_layers=3, batch_first=True, device=self.device
+        )
         self.linear = torch.nn.Linear(hidden_size, vocabulary.size, device=self.device)
         self.automatic_optimization = False
 
@@ -34,11 +43,13 @@ class Generator(pl.LightningModule):
         if labels is not None:
             h[0, batch_size, 0] = labels
         c = torch.rand(3, batch_size, self.hidden_size, device=self.device)
-        return (h, c)
+        return h, c
 
     def likelihood(self, target):
         batch_size, seq_len = target.size()
-        x = torch.tensor([self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device)
+        x = torch.tensor(
+            [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
+        )
         h = self.init_h(batch_size)
         scores = torch.zeros(batch_size, seq_len, device=self.device)
         for step in range(seq_len):
@@ -62,7 +73,9 @@ class Generator(pl.LightningModule):
 
     def sample(self, batch_size):
         # TODO: Maybe extract sample to take a generator model instead of being a method?
-        x = torch.tensor([self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device)
+        x = torch.tensor(
+            [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
+        )
         h = self.init_h(batch_size)
         sequences = torch.zeros(batch_size, self.voc.max_len, device=self.device).long()
         is_end = torch.zeros(batch_size, device=self.device).bool()
@@ -88,7 +101,9 @@ class Generator(pl.LightningModule):
         mutate: Optional["Generator"] = None,
     ):
         # Start tokens
-        x = torch.tensor([self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device)
+        x = torch.tensor(
+            [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
+        )
         # Hidden states initialization for exploitation network
         h = self.init_h(batch_size)
         # Hidden states initialization for exploration network
@@ -182,29 +197,33 @@ if __name__ == "__main__":
         generator = Generator(vocabulary=vocabulary)
 
         logging.info("Creating Trainer...")
-        trainer = pl.Trainer(gpus=1, log_every_n_steps=1 if dev else 50, max_epochs=epochs, fast_dev_run=dev)
+        trainer = pl.Trainer(
+            gpus=1,
+            log_every_n_steps=1 if dev else 50,
+            max_epochs=epochs,
+            fast_dev_run=dev,
+        )
 
         logging.info("Initiating ML Flow tracking...")
         mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
         mlflow.pytorch.autolog()
 
-        datamodule = ChemblCorpus(vocabulary=vocabulary, n_workers=n_workers, batch_size=64)
+        datamodule = ChemblCorpus(
+            vocabulary=vocabulary, n_workers=n_workers, batch_size=64
+        )
         # datamodule.prepare_data()
         datamodule.setup(stage="fit")
 
         logging.info("Starting run...")
         with mlflow.start_run() as run:
-            trainer.fit(
-                model=generator,
-                datamodule=datamodule
-            )
+            trainer.fit(model=generator, datamodule=datamodule)
 
         print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
 
     def sample(nr_samples: int, vocabulary_path: Path, model_ckpt: Path):
         vocabulary = Vocabulary(vocabulary_path=vocabulary_path)
         generator = Generator(vocabulary=vocabulary)
-        generator.load_from_checkpoint(model_ckpt, vocabulary=vocabulary)
+        generator.load_from_checkpoint(str(model_ckpt), vocabulary=vocabulary)
 
         encoded_samples = generator.sample(nr_samples)
         decoded_samples = [vocabulary.decode(sample) for sample in encoded_samples]
