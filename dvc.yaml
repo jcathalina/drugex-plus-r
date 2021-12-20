@@ -10,3 +10,10 @@ stages:
     - data/processed/chembl_voc.txt
     - data/processed/ligand_corpus.txt
     - data/processed/ligand_voc.txt
+  environment:
+    cmd: python src/drugexr/training/train_env.py
+    deps:
+    - data/raw/ligand_raw.tsv
+    - src/drugexr/training/train_env.py
+    outs:
+    - models/output/single

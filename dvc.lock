@@ -25,3 +25,17 @@ stages:
     - path: data/processed/ligand_voc.txt
       md5: 7bc1254858a057cc21e5cc19f6f78fcf
       size: 162
+  environment:
+    cmd: python src/drugexr/training/train_env.py
+    deps:
+    - path: data/raw/ligand_raw.tsv
+      md5: 7e6bcb0bbfd8b250d41330038576caf4
+      size: 40763001
+    - path: src/drugexr/training/train_env.py
+      md5: 77a39a85b067668ba346df7322c26c9f
+      size: 7083
+    outs:
+    - path: models/output/single
+      md5: 77914260215d2a18062b164f9ba69bf5.dir
+      size: 314675889
+      nfiles: 9
