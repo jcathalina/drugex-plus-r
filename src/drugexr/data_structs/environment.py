@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 from rdkit import Chem
 
-from src.drugexr.models.predictor import Predictor
-from src.drugexr.utils.fingerprints import get_fingerprint
-from src.drugexr.utils.sorting import nsgaii_sort, similarity_sort
+from drugexr.models.predictor import Predictor
+from drugexr.utils.fingerprints import get_fingerprint
+from drugexr.utils.sorting import nsgaii_sort, similarity_sort
 
 
 class Environment:

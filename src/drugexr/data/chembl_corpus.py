@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning.utilities.types import (EVAL_DATALOADERS,
                                                TRAIN_DATALOADERS)
+from torch._C import dtype
 from torch.utils.data.dataloader import DataLoader
 
 import drugexr.config.constants as const
@@ -18,7 +19,7 @@ class ChemblCorpus(pl.LightningDataModule):
         self,
         vocabulary: Vocabulary,
         data_dir: Path = const.PROC_DATA_PATH,
-        batch_size: int = 512,
+        batch_size: int = 64,
         n_workers: int = 1,
     ):
         super().__init__()
@@ -35,17 +36,17 @@ class ChemblCorpus(pl.LightningDataModule):
             chembl_full = chembl_full.drop(
                 chembl_test.index
             )  # Make sure the test set is excluded
-            self.chembl_test = torch.LongTensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_test])
+            self.chembl_test = torch.tensor(
+                self.vocabulary.encode([seq.split(" ") for seq in chembl_test]), dtype=torch.long
             )
 
         if stage == "fit" or stage is None:
             chembl_train, chembl_val = random_split_frac(dataset=chembl_full)
-            self.chembl_train = torch.LongTensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_train])
+            self.chembl_train = torch.tensor(
+                self.vocabulary.encode([seq.split(" ") for seq in chembl_train]), dtype=torch.long
             )
-            self.chembl_val = torch.LongTensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_val])
+            self.chembl_val = torch.tensor(
+                self.vocabulary.encode([seq.split(" ") for seq in chembl_val], dtype=torch.long)
             )
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
@@ -62,7 +63,6 @@ class ChemblCorpus(pl.LightningDataModule):
         return DataLoader(
             self.chembl_val,
             batch_size=self.batch_size,
-            shuffle=True,
             drop_last=True,
             pin_memory=True,
             num_workers=self.n_workers,
@@ -72,7 +72,6 @@ class ChemblCorpus(pl.LightningDataModule):
         return DataLoader(
             self.chembl_test,
             batch_size=self.batch_size,
-            shuffle=True,
             drop_last=True,
             pin_memory=True,
             num_workers=self.n_workers,

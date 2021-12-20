@@ -1,6 +1,7 @@
 from typing import Optional
 import pytorch_lightning as pl
 import torch
+from torch.utils.data import DataLoader
 
 import logging
 from drugexr.data.chembl_corpus import ChemblCorpus
@@ -37,7 +38,7 @@ class Generator(pl.LightningModule):
 
     def likelihood(self, target):
         batch_size, seq_len = target.size()
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size, device=self.device)
+        x = torch.tensor([self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device)
         h = self.init_h(batch_size)
         scores = torch.zeros(batch_size, seq_len, device=self.device)
         for step in range(seq_len):
@@ -61,7 +62,7 @@ class Generator(pl.LightningModule):
 
     def sample(self, batch_size):
         # TODO: Maybe extract sample to take a generator model instead of being a method?
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size, device=self.device)
+        x = torch.tensor([self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device)
         h = self.init_h(batch_size)
         sequences = torch.zeros(batch_size, self.voc.max_len, device=self.device).long()
         is_end = torch.zeros(batch_size, device=self.device).bool()
@@ -87,7 +88,7 @@ class Generator(pl.LightningModule):
         mutate: Optional["Generator"] = None,
     ):
         # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size, device=self.device)
+        x = torch.tensor([self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device)
         # Hidden states initialization for exploitation network
         h = self.init_h(batch_size)
         # Hidden states initialization for exploration network
@@ -154,8 +155,8 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     from torch.utils.data import DataLoader, random_split
 
-    from src.drugexr.config import constants as c
-    from src.drugexr.data_structs.vocabulary import Vocabulary
+    from drugexr.config import constants as c
+    from drugexr.data_structs.vocabulary import Vocabulary
 
     load_dotenv()
 
@@ -171,7 +172,7 @@ if __name__ == "__main__":
         TODO: Update this docstring when it's done.
         """
         if dev:
-            from src.drugexr.config import constants as c
+            from drugexr.config import constants as c
 
             corpus_path = c.PROC_DATA_PATH / "chembl_corpus_DEV_1000.txt"
 
@@ -180,41 +181,14 @@ if __name__ == "__main__":
         logging.info("Creating Generator instance...")
         generator = Generator(vocabulary=vocabulary)
 
-        # logging.info("Creating DataLoader...")
-        # chembl = pd.read_table(corpus_path).Token  # Make this more generic?
-        # chembl = torch.LongTensor(vocabulary.encode([seq.split(" ") for seq in chembl]))
-
-        # n_samples = len(chembl)
-        # train_samples = np.floor(0.9 * n_samples)
-        # val_samples = n_samples - train_samples
-        # print(train_samples, val_samples)
-        # chembl_train, chembl_val = random_split(chembl, [900, 100])
-
-        # train_loader = DataLoader(
-        #     chembl_train,
-        #     batch_size=64,
-        #     shuffle=True,
-        #     drop_last=True,
-        #     pin_memory=True,
-        #     num_workers=n_workers,
-        # )
-        # val_loader = DataLoader(
-        #     chembl_val,
-        #     batch_size=64,
-        #     shuffle=True,
-        #     drop_last=True,
-        #     pin_memory=True,
-        #     num_workers=n_workers,
-        # )
-
         logging.info("Creating Trainer...")
-        trainer = pl.Trainer(gpus=1, log_every_n_steps=50, max_epochs=epochs, fast_dev_run=True)
+        trainer = pl.Trainer(gpus=1, log_every_n_steps=1 if dev else 50, max_epochs=epochs, fast_dev_run=dev)
 
         logging.info("Initiating ML Flow tracking...")
         mlflow.set_tracking_uri("https://dagshub.com/naisuu/drugex-plus-r.mlflow")
         mlflow.pytorch.autolog()
 
-        datamodule = ChemblCorpus(n_workers=n_workers)
+        datamodule = ChemblCorpus(vocabulary=vocabulary, n_workers=n_workers, batch_size=64)
         # datamodule.prepare_data()
         datamodule.setup(stage="fit")
 
@@ -240,6 +214,6 @@ if __name__ == "__main__":
         corpus_path=c.PROC_DATA_PATH / "chembl_corpus.txt",
         vocabulary_path=c.PROC_DATA_PATH / "chembl_voc.txt",
         dev=True,
-        n_workers=8,
+        n_workers=1,
         epochs=100,
     )

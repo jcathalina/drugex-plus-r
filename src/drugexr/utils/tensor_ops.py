@@ -149,7 +149,7 @@ def random_split_frac(dataset: Dataset, train_frac: float = 0.9, val_frac: float
 
     dataset_size = len(dataset)
 
-    len_1 = np.floor(train_frac * dataset_size)
+    len_1 = int(np.floor(train_frac * dataset_size))
     len_2 = dataset_size - len_1
     return random_split(dataset=dataset, lengths=[len_1, len_2])
 
