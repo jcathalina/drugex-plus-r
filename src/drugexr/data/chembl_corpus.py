@@ -46,7 +46,7 @@ class ChemblCorpus(pl.LightningDataModule):
                 self.vocabulary.encode([seq.split(" ") for seq in chembl_train]), dtype=torch.long
             )
             self.chembl_val = torch.tensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_val], dtype=torch.long)
+                self.vocabulary.encode([seq.split(" ") for seq in chembl_val]), dtype=torch.long
             )
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
