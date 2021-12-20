@@ -6,7 +6,6 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning.utilities.types import (EVAL_DATALOADERS,
                                                TRAIN_DATALOADERS)
-from torch._C import dtype
 from torch.utils.data.dataloader import DataLoader
 
 import drugexr.config.constants as const
@@ -36,18 +35,12 @@ class ChemblCorpus(pl.LightningDataModule):
             chembl_full = chembl_full.drop(
                 chembl_test.index
             )  # Make sure the test set is excluded
-            self.chembl_test = torch.tensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_test]), dtype=torch.long
-            )
+            self.chembl_test =  self.vocabulary.encode([seq.split(" ") for seq in chembl_test])
 
         if stage == "fit" or stage is None:
             chembl_train, chembl_val = random_split_frac(dataset=chembl_full)
-            self.chembl_train = torch.tensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_train]), dtype=torch.long
-            )
-            self.chembl_val = torch.tensor(
-                self.vocabulary.encode([seq.split(" ") for seq in chembl_val]), dtype=torch.long
-            )
+            self.chembl_train = self.vocabulary.encode([seq.split(" ") for seq in chembl_train])
+            self.chembl_val = self.vocabulary.encode([seq.split(" ") for seq in chembl_val])
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(
