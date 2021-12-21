@@ -27,13 +27,14 @@ if __name__ == "__main__":
     scheme = RewardScheme.PARETO_FRONT
 
     # construct the environment with three predictors
-    keys = ["A1", "A2A", "ERG"]
+    keys = ["A1", "A2A", "ERG", "RA_SCORE"]
     A1 = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL226.pkg", type_=z)
     A2A = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL251.pkg", type_=z)
     ERG = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL240.pkg", type_=z)
+    RA_SCORER = None  # TODO: Pass a function that takes a list of Mol objects (or use the raw smiles if this turns out to be faster)
 
     # Chose the desirability function
-    objs = [A1, A2A, ERG]
+    objs = [A1, A2A, ERG, RA_SCORER]
     n_objs = len(objs)
 
     if scheme == RewardScheme.WEIGHTED_SUM:

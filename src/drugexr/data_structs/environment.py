@@ -47,11 +47,13 @@ class Environment:
         if is_smiles:
             mols = [Chem.MolFromSmiles(s) for s in mols]
         for i, key in enumerate(self.keys):
+            # TODO: should probably be using is instance of instead...
             if type(self.objs[i]) == Predictor:
                 if fps is None:
                     fps = Predictor.calc_fp(mols)
                 score = self.objs[i](fps)
             else:
+                # TODO: This is probably the entry point for SA Score...
                 score = self.objs[i](mols)
             if is_modified and self.mods[i] is not None:
                 score = self.mods[i](score)
