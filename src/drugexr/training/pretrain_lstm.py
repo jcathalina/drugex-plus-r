@@ -69,7 +69,7 @@ def main(
     # NOTE: DrugEx V2 uses a lower learning rate for fine-tuning the LSTM, which is why we do it here as well.
     prior.load_from_checkpoint(pretrained_lstm_path, vocabulary=vocabulary, lr=1e-4)
 
-    ligand_dm = LigandCorpus(vocabulary=vocabulary, n_workers=n_workers)
+    ligand_dm = LigandCorpus(vocabulary=vocabulary)  # Setting multiple dataloaders is actually slower due to the small dataset.
     logging.info("Setting up Ligand Data Module...")
     ligand_dm.setup(stage="fit")
 
