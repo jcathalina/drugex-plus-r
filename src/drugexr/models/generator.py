@@ -72,7 +72,6 @@ class Generator(pl.LightningModule):
             opt.step()
 
     def sample(self, batch_size):
-        # TODO: Maybe extract sample to take a generator model instead of being a method?
         x = torch.tensor(
             [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
         )

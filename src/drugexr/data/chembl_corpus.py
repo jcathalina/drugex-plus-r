@@ -7,7 +7,7 @@ from pytorch_lightning.utilities.types import (EVAL_DATALOADERS,
                                                TRAIN_DATALOADERS)
 from torch.utils.data.dataloader import DataLoader
 
-import drugexr.config.constants as const
+from drugexr.config.constants import PROC_DATA_PATH
 from drugexr.data_structs.vocabulary import Vocabulary
 from drugexr.utils.tensor_ops import random_split_frac
 
@@ -16,8 +16,8 @@ class ChemblCorpus(pl.LightningDataModule):
     def __init__(
         self,
         vocabulary: Vocabulary,
-        data_dir: Path = const.PROC_DATA_PATH,
-        batch_size: int = 64,
+        data_dir: Path = PROC_DATA_PATH,
+        batch_size: int = 512,
         n_workers: int = 1,
     ):
         super().__init__()
