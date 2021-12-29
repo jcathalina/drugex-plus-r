@@ -19,6 +19,7 @@ def main(
     fine_tuning_epochs: int = 1_000,
     dev: bool = False,
     n_workers: int = 4,
+    gpus: int = 1
 ):
     load_dotenv()
 
@@ -50,7 +51,7 @@ def main(
 
         logging.info("Creating Trainer...")
         pretrainer = pl.Trainer(
-            gpus=1,
+            gpus=gpus,
             log_every_n_steps=1 if dev else 50,
             max_epochs=training_epochs,
             fast_dev_run=dev,
