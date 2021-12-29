@@ -19,7 +19,7 @@ def main(
     fine_tuning_epochs: int = 1_000,
     dev: bool = False,
     n_workers: int = 4,
-    gpus: int = 1
+    n_gpus: int = 1
 ):
     load_dotenv()
 
@@ -51,7 +51,7 @@ def main(
 
         logging.info("Creating Trainer...")
         pretrainer = pl.Trainer(
-            gpus=gpus,
+            gpus=n_gpus,
             log_every_n_steps=1 if dev else 50,
             max_epochs=training_epochs,
             fast_dev_run=dev,
@@ -88,8 +88,8 @@ def main(
 
     print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
     logging.info("Fine-tuning finished, saving fine-tuned LSTM checkpoint...")
-    pretrainer.save_checkpoint(filepath=fine_tuned_lstm_path)
+    fine_tuner.save_checkpoint(filepath=fine_tuned_lstm_path)
 
 
 if __name__ == "__main__":
-    main()
+    main(dev=True)

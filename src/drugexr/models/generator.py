@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 
 from drugexr.data.chembl_corpus import ChemblCorpus
 from drugexr.data_structs.vocabulary import Vocabulary
+from drugexr.utils import tensor_ops
 from drugexr.utils.tensor_ops import print_auto_logged_info
 
 
@@ -18,6 +19,7 @@ class Generator(pl.LightningModule):
         hidden_size: int = 512,
         lr: float = 1e-3,
     ):
+        """ """
         super().__init__()
         self.voc = vocabulary
         self.embed_size = embed_size
@@ -33,12 +35,14 @@ class Generator(pl.LightningModule):
         self.automatic_optimization = False
 
     def forward(self, x, h):
+        """ """
         output = self.embed(x.unsqueeze(-1))
         output, h_out = self.rnn(output, h)
         output = self.linear(output).squeeze(1)
         return output, h_out
 
     def init_h(self, batch_size, labels=None):
+        """ """
         h = torch.rand(3, batch_size, 512, device=self.device)
         if labels is not None:
             h[0, batch_size, 0] = labels
@@ -46,6 +50,7 @@ class Generator(pl.LightningModule):
         return h, c
 
     def likelihood(self, target):
+        """ """
         batch_size, seq_len = target.size()
         x = torch.tensor(
             [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
@@ -64,7 +69,7 @@ class Generator(pl.LightningModule):
         """ """
         opt = self.optimizers()
         for sequence, reward in loader:
-            opt.zero_grad()
+            self.zero_grad()
             score = self.likelihood(sequence)
             loss = score * reward
             loss = -loss.mean()
@@ -72,6 +77,7 @@ class Generator(pl.LightningModule):
             opt.step()
 
     def sample(self, batch_size):
+        """ """
         x = torch.tensor(
             [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
         )
@@ -99,6 +105,7 @@ class Generator(pl.LightningModule):
         crover: Optional["Generator"] = None,
         mutate: Optional["Generator"] = None,
     ):
+        """ """
         # Start tokens
         x = torch.tensor(
             [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
@@ -149,8 +156,8 @@ class Generator(pl.LightningModule):
         loss = self.likelihood(batch)
         loss = -loss.mean()
         self.manual_backward(loss)
-        self.log("train_loss", loss)
         opt.step()
+        self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -158,6 +165,14 @@ class Generator(pl.LightningModule):
         loss = -loss.mean()
         self.log("val_loss", loss)
         return loss
+
+    def on_validation_epoch_end(self) -> None:
+        sequences = self.sample(1024)  # batch size (512 by default) times 2
+        indices = tensor_ops.unique(sequences)
+        sequences = sequences[indices]
+        smiles, valids = self.voc.check_smiles(sequences)
+        frac_valid = sum(valids) / len(sequences)
+        self.log("frac_valid_smiles", frac_valid)
 
 
 if __name__ == "__main__":
