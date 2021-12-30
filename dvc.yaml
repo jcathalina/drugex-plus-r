@@ -30,7 +30,7 @@ stages:
     cmd: python src/drugexr/training/fine_tune_lstm.py
     deps:
     - data/processed/ligand_corpus.txt
-    - data/processed/ligand_voc.txt
+    - data/processed/chembl_voc.txt
     - src/drugexr/data/ligand_corpus.py
     - src/drugexr/training/fine_tune_lstm.py
     outs:
