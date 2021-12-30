@@ -26,3 +26,12 @@ stages:
     - src/drugexr/training/pretrain_lstm.py
     outs:
     - models/output/rnn/pretrained_lstm.ckpt
+  fine_tune_lstm:
+    cmd: python src/drugexr/training/fine_tune_lstm.py
+    deps:
+    - data/processed/ligand_corpus.txt
+    - data/processed/ligand_voc.txt
+    - src/drugexr/data/ligand_corpus.py
+    - src/drugexr/training/fine_tune_lstm.py
+    outs:
+    - models/output/rnn/fine_tuned_lstm_lr_1e-4.ckpt
