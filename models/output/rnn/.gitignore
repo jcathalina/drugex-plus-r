@@ -1,2 +1,5 @@
 /lstm_chembl.pkg
 /lstm_ligand_T.pkg
+/fine_tuned_lstm.ckpt
+/fine_tuned_lstm_lr_1e-4.ckpt
+/pretrained_lstm.ckpt
