@@ -31,6 +31,7 @@ stages:
     deps:
     - data/processed/ligand_corpus.txt
     - data/processed/chembl_voc.txt
+    - models/output/rnn/pretrained_lstm.ckpt
     - src/drugexr/data/ligand_corpus.py
     - src/drugexr/training/fine_tune_lstm.py
     outs:
