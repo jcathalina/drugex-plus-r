@@ -1,4 +1,0 @@
-outs:
-- md5: ec4879b28f854ccf544467cad75f971b
-  size: 22294392
-  path: pretrained_lstm.ckpt

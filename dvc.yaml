@@ -17,3 +17,12 @@ stages:
     - src/drugexr/training/train_env.py
     outs:
     - models/output/single
+  pretrain_lstm:
+    cmd: python src/drugexr/training/pretrain_lstm.py
+    deps:
+    - data/processed/chembl_corpus.txt
+    - data/processed/chembl_voc.txt
+    - src/drugexr/data/chembl_corpus.py
+    - src/drugexr/training/pretrain_lstm.py
+    outs:
+    - models/output/rnn/pretrained_lstm.ckpt
