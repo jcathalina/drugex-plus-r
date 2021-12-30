@@ -100,11 +100,13 @@ class DrugExR:
                     / self.n_samples
                     / len(self.environment.keys)
                 )
-            else:
+            elif self.mean_fn == MeanFn.GEOMETRIC:
                 score = scores[self.environment.keys].values.prod(axis=1) ** (
                     1.0 / len(self.environment.keys)
                 )
                 score = score.sum() / self.n_samples
+            else:
+                raise ValueError(f"Selected mean function {self.mean_fn} does not exist.")
 
             valid = scores["VALID"].sum() / self.n_samples
 

@@ -3,9 +3,12 @@ import pathlib
 
 import joblib
 import numpy as np
+import rdkit.Chem
+import torch.nn
 from rdkit import DataStructs
 from rdkit.Chem import AllChem
 
+from drugexr.config.constants import MODEL_PATH
 from drugexr.data_structs.property import Property
 
 
@@ -33,7 +36,9 @@ class Predictor:
         fps = np.zeros((len(mols), bit_len))
         for i, mol in enumerate(mols):
             try:
-                fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=bit_len)
+                if isinstance(mol, str):
+                    mol = rdkit.Chem.MolFromSmiles(mol)  # Make Mol object before calculating morgan FP or else it breaks.
+                fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=bit_len)
                 DataStructs.ConvertToNumpyArray(fp, fps[i, :])
             except Exception as e:
                 logging.error(f"Something went wrong while creating fingerprints: {e}")

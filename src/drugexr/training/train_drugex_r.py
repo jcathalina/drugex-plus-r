@@ -12,6 +12,7 @@ from drugexr.data_structs.vocabulary import Vocabulary
 from drugexr.models.drugex_r import DrugExR, RewardScheme
 from drugexr.models.generator import Generator
 from drugexr.models.predictor import Predictor
+from drugexr.scoring.ra_scorer import RetrosyntheticAccessibilityScorer
 from drugexr.utils import normalization
 
 
@@ -20,8 +21,7 @@ def main():
 
 
 if __name__ == "__main__":
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    case = "OBJ3"
+    case = "OBJ4"
     z = "REG"
     alg = "evolve"
     scheme = RewardScheme.PARETO_FRONT
@@ -31,7 +31,8 @@ if __name__ == "__main__":
     A1 = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL226.pkg", type_=z)
     A2A = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL251.pkg", type_=z)
     ERG = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL240.pkg", type_=z)
-    RA_SCORER = None  # TODO: Pass a function that takes a list of Mol objects (or use the raw smiles if this turns out to be faster)
+    RA_SCORER = RetrosyntheticAccessibilityScorer(use_xgb_model=False)
+    # TODO: Pass a function that takes a list of Mol objects (or use the raw smiles if this turns out to be faster)
 
     # Chose the desirability function
     objs = [A1, A2A, ERG, RA_SCORER]

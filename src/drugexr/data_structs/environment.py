@@ -6,6 +6,7 @@ from rdkit import Chem
 
 from drugexr.models.drugex_r import RewardScheme
 from drugexr.models.predictor import Predictor
+from drugexr.scoring.ra_scorer import RetrosyntheticAccessibilityScorer
 from drugexr.utils.fingerprints import get_fingerprint
 from drugexr.utils.sorting import nsgaii_sort, similarity_sort
 
@@ -52,8 +53,9 @@ class Environment:
                 if fps is None:
                     fps = Predictor.calc_fp(mols)
                 score = self.objs[i](fps)
+            elif type(self.objs[i]) == RetrosyntheticAccessibilityScorer:
+                score = self.objs[i](mols)
             else:
-                # TODO: This is probably the entry point for SA Score...
                 score = self.objs[i](mols)
             if is_modified and self.mods[i] is not None:
                 score = self.mods[i](score)

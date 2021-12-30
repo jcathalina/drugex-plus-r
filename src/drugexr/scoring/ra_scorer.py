@@ -1,8 +1,10 @@
 # --TODO: Extract root logger to some kind of config file.--
 import logging
 import sys
-from typing import Optional
+from typing import Optional, Union, List
 
+import numpy as np
+import rdkit
 from RAscore import RAscore_NN, RAscore_XGB
 
 from drugexr.config.constants import MODEL_PATH
@@ -32,7 +34,6 @@ def calculate_score(mol: str, use_xgb_model: bool = False) -> Optional[float]:
 
     Returns: A score between 0 and 1 indicating how likely a synthesis route is to be found by the underlying CASP tool (AiZynthFinder).
     """
-    logger.info("RA SCORE HAS BEEN CALLED!")
     scorer = (
         RAscore_XGB.RAScorerXGB(model_path=XGB_MODEL_PATH)
         if use_xgb_model
@@ -43,9 +44,25 @@ def calculate_score(mol: str, use_xgb_model: bool = False) -> Optional[float]:
     return score
 
 
+class RetrosyntheticAccessibilityScorer:
+    def __init__(self, use_xgb_model: bool = False):
+        self.scorer = (
+            RAscore_XGB.RAScorerXGB(model_path=XGB_MODEL_PATH)
+            if use_xgb_model
+            else RAscore_NN.RAScorerNN(model_path=NN_MODEL_PATH)
+        )
+
+    def __call__(self, mols: List[str]):
+        scores = np.zeros(shape=len(mols), dtype="float64")
+        for i, mol in enumerate(mols):
+            if not isinstance(mol, str):
+                mol = rdkit.Chem.MolToSmiles(mol)
+            scores[i] = self.scorer.predict(mol)
+        return scores
+
+
 # TODO: Extract to dedicated test module
 def test_calc_ra_score():
     omeprazole = "CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC"
     score = calculate_score(mol=omeprazole)
-    print(score)
     assert 0 <= score <= 1
