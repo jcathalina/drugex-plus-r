@@ -1,14 +1,11 @@
-import logging
-from typing import Optional
+from typing import Optional, Tuple
 
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
 
-from drugexr.data.chembl_corpus import ChemblCorpus
 from drugexr.data_structs.vocabulary import Vocabulary
 from drugexr.utils import tensor_ops
-from drugexr.utils.tensor_ops import print_auto_logged_info
 
 
 class Generator(pl.LightningModule):
@@ -19,7 +16,15 @@ class Generator(pl.LightningModule):
         hidden_size: int = 512,
         lr: float = 1e-3,
     ):
-        """ """
+        """
+        Class defining the molecule generating LSTM model.
+
+        Args:
+            vocabulary (Vocabulary): An object containing all tokens available to generate SMILES with.
+            embed_size (int): Size of the embedding space.
+            hidden_size (int): Number of nodes in the hidden layers.
+            lr (float): Learning rate for training, 1e-3 by default.
+        """
         super().__init__()
         self.voc = vocabulary
         self.embed_size = embed_size
@@ -35,22 +40,33 @@ class Generator(pl.LightningModule):
         self.automatic_optimization = False
 
     def forward(self, x, h):
-        """ """
         output = self.embed(x.unsqueeze(-1))
         output, h_out = self.rnn(output, h)
         output = self.linear(output).squeeze(1)
         return output, h_out
 
-    def init_h(self, batch_size, labels=None):
-        """ """
+    def init_h(self, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Initializes a hidden state for the LSTM
+        Args:
+            batch_size (int): batch size to use for the hidden state.
+
+        Returns:
+            A hidden state tuple
+        """
         h = torch.rand(3, batch_size, 512, device=self.device)
-        if labels is not None:
-            h[0, batch_size, 0] = labels
         c = torch.rand(3, batch_size, self.hidden_size, device=self.device)
         return h, c
 
-    def likelihood(self, target):
-        """ """
+    def likelihood(self, target: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the likelihood of the next token in the sequence for a batch of molecules
+        Args:
+            target (torch.Tensor): A tensor containing the size of the batch to use and the associated sequence length
+
+        Returns:
+            A tensor containing likelihood scores for all molecules in the batch
+        """
         batch_size, seq_len = target.size()
         x = torch.tensor(
             [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
