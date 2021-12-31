@@ -1,26 +1,17 @@
 import logging
-from enum import Enum
 from pathlib import Path
 
 import numpy as np
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
+from tqdm import tqdm
 
 from drugexr.config.constants import DEVICE
 from drugexr.data_structs.environment import Environment
 from drugexr.models.generator import Generator
 from drugexr.utils import tensor_ops
-
-
-class MeanFn(Enum):
-    GEOMETRIC = 1
-    ARITHMETIC = 2
-
-
-class RewardScheme(Enum):
-    PARETO_FRONT = 1
-    WEIGHTED_SUM = 2
+from drugexr.utils.enums import RewardScheme, MeanFn
 
 
 class DrugExR:
@@ -75,6 +66,7 @@ class DrugExR:
         loader = DataLoader(dataset=dataset, batch_size=self.n_samples, shuffle=True)
 
         self.agent.policy_gradient_loss(loader=loader)
+        # FIXME: Things break here because of CPU/GPU discrepancy, debug.
 
     def fit(self, output_path: Path, epochs: int = 10_000, interval: int = 250):
         """ """
@@ -84,7 +76,7 @@ class DrugExR:
         interval = interval
         last_save = -1
 
-        for epoch in range(epochs):
+        for epoch in tqdm(range(epochs)):
             self.policy_gradient()
             sequences = self.agent.sample(self.n_samples)
             smiles = [self.agent.voc.decode(seq) for seq in sequences]

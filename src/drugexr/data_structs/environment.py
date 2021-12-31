@@ -1,27 +1,30 @@
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
 from rdkit import Chem
 
-from drugexr.models.drugex_r import RewardScheme
 from drugexr.models.predictor import Predictor
-from drugexr.scoring.ra_scorer import RetrosyntheticAccessibilityScorer
+from drugexr.utils.enums import RewardScheme
 from drugexr.utils.fingerprints import get_fingerprint
 from drugexr.utils.sorting import nsgaii_sort, similarity_sort
 
 
 class Environment:
-    def __init__(self, objs, mods, keys, ths=None):
+    def __init__(self,
+                 objs: List,
+                 mods: List,
+                 keys: List[str],
+                 ths: Optional[List[float]] = None):
         """
         Initialized methods for the construction of environment.
         Args:
-            objs (List[Ojective]): a list of objectives.
-            mods (List[Modifier]): a list of modifiers, and its length
+            objs (List[Any]): a list of objectives.
+            mods (List[Any]): a list of modifiers, and its length
                 equals the size of objs.
             keys (List[str]): a list of strings as the names of objectives,
                 and its length equals the size of objs.
-            ths (List): a list of float value, and ts length equals the size of objs.
+            ths (Optional[List[float]]): a list of float value, and ts length equals the size of objs.
         """
         self.objs = objs
         self.mods = mods
@@ -53,8 +56,6 @@ class Environment:
                 if fps is None:
                     fps = Predictor.calc_fp(mols)
                 score = self.objs[i](fps)
-            elif type(self.objs[i]) == RetrosyntheticAccessibilityScorer:
-                score = self.objs[i](mols)
             else:
                 score = self.objs[i](mols)
             if is_modified and self.mods[i] is not None:
@@ -77,7 +78,7 @@ class Environment:
                 fps.append(None)
         return fps
 
-    def calc_reward(self, smiles, scheme: RewardScheme = "WS"):
+    def calc_reward(self, smiles, scheme: RewardScheme = RewardScheme.WEIGHTED_SUM):
         """
         Calculate the single value as the reward for each molecule used for reinforcement learning
         Args:
@@ -95,7 +96,7 @@ class Environment:
         undesire = len(preds) - desire
         preds = preds[self.keys].values
 
-        if scheme == "PR":
+        if scheme == RewardScheme.PARETO_FRONT:
             fps = self.calc_fps(mols)
             rewards = np.zeros((len(smiles), 1))
             ranks = similarity_sort(preds, fps, is_gpu=True)
@@ -103,14 +104,17 @@ class Environment:
                 np.arange(desire) / desire / 2 + 0.5
             ).tolist()
             rewards[ranks, 0] = score
-        elif scheme == "CD":
+        elif scheme == RewardScheme.CROWDING_DISTANCE:
             rewards = np.zeros((len(smiles), 1))
             ranks = nsgaii_sort(preds, is_gpu=True)
             rewards[ranks, 0] = np.arange(len(preds)) / len(preds)
-        else:
+        elif scheme == RewardScheme.WEIGHTED_SUM:
             weight = ((preds < self.ths).mean(axis=0, keepdims=True) + 0.01) / (
                 (preds >= self.ths).mean(axis=0, keepdims=True) + 0.01
             )
             weight = weight / weight.sum()
             rewards = preds.dot(weight.T)
+        else:
+            raise ValueError(f"Selected weight scheme {scheme} does not exist.")
+
         return rewards

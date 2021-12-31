@@ -55,8 +55,13 @@ class RetrosyntheticAccessibilityScorer:
     def __call__(self, mols: List[str]):
         scores = np.zeros(shape=len(mols), dtype="float64")
         for i, mol in enumerate(mols):
+            if mol is None:
+                scores[i] = .0
+                continue
+
             if not isinstance(mol, str):
                 mol = rdkit.Chem.MolToSmiles(mol)
+
             scores[i] = self.scorer.predict(mol)
         return scores
 

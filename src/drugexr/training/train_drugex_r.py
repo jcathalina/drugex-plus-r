@@ -3,10 +3,9 @@ import time
 from pathlib import Path
 from shutil import copy2
 
-import torch
-
-from drugexr.config.constants import (MODEL_PATH, PROC_DATA_PATH, ROOT_PATH,
-                                      TEST_RUN)
+from drugexr.config.constants import (MODEL_PATH,
+                                      PROC_DATA_PATH,
+                                      ROOT_PATH,)
 from drugexr.data_structs.environment import Environment
 from drugexr.data_structs.vocabulary import Vocabulary
 from drugexr.models.drugex_r import DrugExR, RewardScheme
@@ -16,18 +15,14 @@ from drugexr.scoring.ra_scorer import RetrosyntheticAccessibilityScorer
 from drugexr.utils import normalization
 
 
-def main():
-    pass
-
-
-if __name__ == "__main__":
+def main(dev: bool = False):
     case = "OBJ4"
     z = "REG"
     alg = "evolve"
     scheme = RewardScheme.PARETO_FRONT
 
     # construct the environment with three predictors
-    keys = ["A1", "A2A", "ERG", "RA_SCORE"]
+    keys = ["A1", "A2A", "ERG", "RA_SCORER"]
     A1 = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL226.pkg", type_=z)
     A2A = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL251.pkg", type_=z)
     ERG = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL240.pkg", type_=z)
@@ -51,7 +46,7 @@ if __name__ == "__main__":
             f"Valid reward schemes include {RewardScheme.PARETO_FRONT}, {RewardScheme.WEIGHTED_SUM}"
         )
 
-    mods = [mod1, mod1, mod2]
+    mods = [mod1, mod1, mod2, mod1]
     env = Environment(objs=objs, mods=mods, keys=keys, ths=ths)
 
     root_suffix = f"output/{alg}_{case}_{scheme}_{time.strftime('%y%m%d_%H%M%S', time.localtime())}/"
@@ -59,20 +54,18 @@ if __name__ == "__main__":
     os.mkdir(root)
 
     copy2(ROOT_PATH / "src/drugexr/models/drugex_r.py", root)
-    copy2(ROOT_PATH / "src/drugexr/training/train.py", root)
+    copy2(ROOT_PATH / "src/drugexr/training/train_drugex_r.py", root)
 
-    pr_path: Path = MODEL_PATH / "output/rnn/lstm_chembl_R"
-    ft_path: Path = MODEL_PATH / "output/rnn/lstm_ligand_R"
+    pr_path = MODEL_PATH / "output/rnn/pretrained_lstm.ckpt"
+    ft_path = MODEL_PATH / "output/rnn/fine_tuned_lstm_lr_1e-4.ckpt"
 
     voc = Vocabulary(vocabulary_path=PROC_DATA_PATH / "chembl_voc.txt")
-    agent = Generator(voc)
-    agent.load_state_dict(torch.load(ft_path.with_suffix(".pkg")))
 
-    prior = Generator(voc)
-    prior.load_state_dict(torch.load(pr_path.with_suffix(".pkg")))
+    agent = Generator.load_from_checkpoint(checkpoint_path=ft_path, vocabulary=voc)
 
-    crover = Generator(voc)
-    crover.load_state_dict(torch.load(ft_path.with_suffix(".pkg")))
+    prior = Generator.load_from_checkpoint(checkpoint_path=pr_path, vocabulary=voc)
+
+    crover = Generator.load_from_checkpoint(checkpoint_path=ft_path, vocabulary=voc)
 
     learner = DrugExR(
         agent=agent, prior=prior, xover_net=crover, mutator_net=prior, environment=env
@@ -83,5 +76,9 @@ if __name__ == "__main__":
 
     output_path = root / outfile
 
-    epochs = 50 if TEST_RUN else 10_000
+    epochs = 50 if dev else 10_000
     learner.fit(output_path=output_path, epochs=epochs, interval=5)
+
+
+if __name__ == "__main__":
+    main(dev=True)

@@ -83,7 +83,7 @@ class Generator(pl.LightningModule):
 
     def policy_gradient_loss(self, loader: DataLoader) -> None:
         """ """
-        opt = self.optimizers()
+        opt = torch.optim.Adam(self.parameters(), lr=self.lr)  # self.optimizers()
         for sequence, reward in loader:
             self.zero_grad()
             score = self.likelihood(sequence)
