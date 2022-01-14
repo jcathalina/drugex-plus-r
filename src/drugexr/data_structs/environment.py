@@ -78,11 +78,11 @@ class Environment:
                 fps.append(None)
         return fps
 
-    def calc_reward(self, smiles, scheme: RewardScheme = RewardScheme.WEIGHTED_SUM):
+    def calc_reward(self, smiles: List[str], scheme: RewardScheme = RewardScheme.WEIGHTED_SUM):
         """
         Calculate the single value as the reward for each molecule used for reinforcement learning
         Args:
-            smiles (List):  a list of SMILES-based molecules
+            smiles (List[str]):  a list of SMILES-based molecules
             scheme (str): the label of different rewarding schemes, including
                 'WS': weighted sum, 'PR': Pareto ranking with Tanimoto distance,
                 and 'CD': Pareto ranking with crowding distance.

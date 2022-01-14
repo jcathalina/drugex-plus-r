@@ -5,7 +5,7 @@ from shutil import copy2
 
 from drugexr.config.constants import (MODEL_PATH,
                                       PROC_DATA_PATH,
-                                      ROOT_PATH,)
+                                      ROOT_PATH, DEVICE)
 from drugexr.data_structs.environment import Environment
 from drugexr.data_structs.vocabulary import Vocabulary
 from drugexr.models.drugex_r import DrugExR, RewardScheme
@@ -27,7 +27,6 @@ def main(dev: bool = False):
     A2A = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL251.pkg", type_=z)
     ERG = Predictor(path=MODEL_PATH / f"output/single/RF_{z}_CHEMBL240.pkg", type_=z)
     RA_SCORER = RetrosyntheticAccessibilityScorer(use_xgb_model=False)
-    # TODO: Pass a function that takes a list of Mol objects (or use the raw smiles if this turns out to be faster)
 
     # Chose the desirability function
     objs = [A1, A2A, ERG, RA_SCORER]
@@ -61,11 +60,11 @@ def main(dev: bool = False):
 
     voc = Vocabulary(vocabulary_path=PROC_DATA_PATH / "chembl_voc.txt")
 
-    agent = Generator.load_from_checkpoint(checkpoint_path=ft_path, vocabulary=voc)
+    agent = Generator.load_from_checkpoint(checkpoint_path=ft_path, vocabulary=voc).to(DEVICE)
 
-    prior = Generator.load_from_checkpoint(checkpoint_path=pr_path, vocabulary=voc)
+    prior = Generator.load_from_checkpoint(checkpoint_path=pr_path, vocabulary=voc).to(DEVICE)
 
-    crover = Generator.load_from_checkpoint(checkpoint_path=ft_path, vocabulary=voc)
+    crover = Generator.load_from_checkpoint(checkpoint_path=ft_path, vocabulary=voc).to(DEVICE)
 
     learner = DrugExR(
         agent=agent, prior=prior, xover_net=crover, mutator_net=prior, environment=env
@@ -77,7 +76,7 @@ def main(dev: bool = False):
     output_path = root / outfile
 
     epochs = 50 if dev else 10_000
-    learner.fit(output_path=output_path, epochs=epochs, interval=5)
+    learner.fit(output_path=output_path, epochs=epochs, interval=5 if dev else 250)
 
 
 if __name__ == "__main__":

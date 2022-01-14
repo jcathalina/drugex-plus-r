@@ -55,7 +55,8 @@ class DrugExR:
             for _ in range(self.replay)
         ]
 
-        sequences = torch.cat(sequences, dim=0)
+
+        sequences = torch.cat(sequences, dim=0).to(DEVICE)
         smiles = np.array([self.agent.voc.decode(s) for s in sequences])
         indices = tensor_ops.unique(np.array([[smi] for smi in smiles]))
         smiles = smiles[indices]
@@ -76,7 +77,7 @@ class DrugExR:
         interval = interval
         last_save = -1
 
-        for epoch in tqdm(range(epochs)):
+        for epoch in tqdm(range(epochs), desc="Main RL Loop"):
             self.policy_gradient()
             sequences = self.agent.sample(self.n_samples)
             smiles = [self.agent.voc.decode(seq) for seq in sequences]
