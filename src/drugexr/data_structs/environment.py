@@ -5,7 +5,6 @@ import pandas as pd
 from rdkit import Chem
 
 from drugexr.models.predictor import Predictor
-from drugexr.utils.enums import RewardScheme
 from drugexr.utils.fingerprints import get_fingerprint
 from drugexr.utils.sorting import nsgaii_sort, similarity_sort
 
@@ -51,7 +50,6 @@ class Environment:
         if is_smiles:
             mols = [Chem.MolFromSmiles(s) for s in mols]
         for i, key in enumerate(self.keys):
-            # TODO: should probably be using is instance of instead...
             if type(self.objs[i]) == Predictor:
                 if fps is None:
                     fps = Predictor.calc_fp(mols)
@@ -78,7 +76,7 @@ class Environment:
                 fps.append(None)
         return fps
 
-    def calc_reward(self, smiles: List[str], scheme: RewardScheme = RewardScheme.WEIGHTED_SUM):
+    def calc_reward(self, smiles: List[str], scheme: str = "WS"):
         """
         Calculate the single value as the reward for each molecule used for reinforcement learning
         Args:
@@ -96,7 +94,7 @@ class Environment:
         undesire = len(preds) - desire
         preds = preds[self.keys].values
 
-        if scheme == RewardScheme.PARETO_FRONT:
+        if scheme == "PR":
             fps = self.calc_fps(mols)
             rewards = np.zeros((len(smiles), 1))
             ranks = similarity_sort(preds, fps, is_gpu=True)
@@ -104,11 +102,11 @@ class Environment:
                 np.arange(desire) / desire / 2 + 0.5
             ).tolist()
             rewards[ranks, 0] = score
-        elif scheme == RewardScheme.CROWDING_DISTANCE:
+        elif scheme == "CD":
             rewards = np.zeros((len(smiles), 1))
             ranks = nsgaii_sort(preds, is_gpu=True)
             rewards[ranks, 0] = np.arange(len(preds)) / len(preds)
-        elif scheme == RewardScheme.WEIGHTED_SUM:
+        elif scheme == "WS":
             weight = ((preds < self.ths).mean(axis=0, keepdims=True) + 0.01) / (
                 (preds >= self.ths).mean(axis=0, keepdims=True) + 0.01
             )
