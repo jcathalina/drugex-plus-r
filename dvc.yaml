@@ -1,0 +1,38 @@
+stages:
+  featurization:
+    cmd: python src/drugexr/features/featurization.py
+    deps:
+    - data/raw/chembl_26.sdf.gz
+    - data/raw/ligand_raw.tsv
+    - src/drugexr/features/featurization.py
+    outs:
+    - data/processed/chembl_corpus.txt
+    - data/processed/chembl_voc.txt
+    - data/processed/ligand_corpus.txt
+    - data/processed/ligand_voc.txt
+  environment:
+    cmd: python src/drugexr/training/train_env.py
+    deps:
+    - data/raw/ligand_raw.tsv
+    - src/drugexr/training/train_env.py
+    outs:
+    - models/output/single
+  pretrain_lstm:
+    cmd: python src/drugexr/training/pretrain_lstm.py
+    deps:
+    - data/processed/chembl_corpus.txt
+    - data/processed/chembl_voc.txt
+    - src/drugexr/data/chembl_corpus.py
+    - src/drugexr/training/pretrain_lstm.py
+    outs:
+    - models/output/rnn/pretrained_lstm.ckpt
+  fine_tune_lstm:
+    cmd: python src/drugexr/training/fine_tune_lstm.py
+    deps:
+    - data/processed/ligand_corpus.txt
+    - data/processed/chembl_voc.txt
+    - models/output/rnn/pretrained_lstm.ckpt
+    - src/drugexr/data/ligand_corpus.py
+    - src/drugexr/training/fine_tune_lstm.py
+    outs:
+    - models/output/rnn/fine_tuned_lstm_lr_1e-4.ckpt

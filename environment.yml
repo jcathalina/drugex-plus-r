@@ -7,14 +7,21 @@ dependencies:
   - pip
   - rdkit
   - tqdm
-  - pytorch
-  - cudatoolkit=11.3
+  - pytorch-lightning=1.5.3
   - matplotlib
-  - seaborn
-  - scikit-learn
+  - scikit-learn=0.22.1
   - numpy
   - pandas
   - click
+  # DEV ONLY
+  - jupyter
+  - black
+  - pytest
   - pip:
     - git+https://github.com/reymond-group/RAscore.git@master
     - pyprojroot
+    # DEV ONLY
+    - Sphinx
+    - isort
+    - mlflow
+    - python-dotenv

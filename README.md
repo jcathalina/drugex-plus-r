@@ -10,8 +10,14 @@ The code in this repository is based on [DrugEx v2](https://github.com/XuhanLiu/
 After cloning this repository, make sure you have a conda distribution installed. We recommend [miniforge](https://github.com/conda-forge/miniforge) for licensing reasons, but anaconda/miniconda will work as well.
 
 ### Installing the environment
-- `conda env create -f environment.yml` or `conda env create -f environment-dev.yml` (for Developers)
+- `conda env create -f environment.yml`
 - `conda activate drugexr`
+- `pip install -e .`
+
+#### Mamba
+Mamba is a drop-in replacement for conda, it's much faster at resolving environments and is recommended.
+You can install it by running `conda install -c conda-forge mamba`.
+In case you want to use this from the start, replace `conda` with `mamba` in the instructions above.
 
 # Data Version Control (DVC)
 This project uses DVC to version control large data files and trained models on [DagsHub](https://dagshub.com/naisuu/drugex-plus-r).

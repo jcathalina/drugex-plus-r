@@ -3,7 +3,7 @@ from rdkit.Chem import AllChem, Crippen, Descriptors, Lipinski
 from rdkit.Chem.GraphDescriptors import BertzCT
 from rdkit.Chem.QED import qed
 
-from src.drugexr.scoring import sa_scorer
+from drugexr.scoring import ra_scorer, sa_scorer
 
 
 class Property:
@@ -32,6 +32,7 @@ class Property:
             "QED": qed,
             "SA": sa_scorer.calculate_score,
             "Bertz": BertzCT,
+            "RA": ra_scorer.calculate_score,
         }
 
     def __call__(self, mols):

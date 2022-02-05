@@ -1,0 +1,4 @@
+outs:
+- md5: 326d4bc410488d130010c720a4bbb17b
+  size: 66882142
+  path: fine_tuned_lstm.ckpt

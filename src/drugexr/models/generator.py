@@ -1,49 +1,78 @@
-import pathlib
+from typing import Optional, Tuple
 
-import numpy as np
+import pytorch_lightning as pl
 import torch
-from torch import nn, optim
+from torch.utils.data import DataLoader
 
-from src.drugexr.config.constants import DEVICE
-from src.drugexr.utils import tensor_ops
+from drugexr.data_structs.vocabulary import Vocabulary
+from drugexr.utils import tensor_ops
 
 
-# TODO: Refactor class code
-class Generator(nn.Module):
-    def __init__(self, voc, embed_size=128, hidden_size=512, is_lstm=True, lr=1e-3):
-        super(Generator, self).__init__()
-        self.voc = voc
+class Generator(pl.LightningModule):
+    def __init__(
+        self,
+        vocabulary: Vocabulary,
+        embed_size: int = 128,
+        hidden_size: int = 512,
+        lr: float = 1e-3,
+    ):
+        """
+        Class defining the molecule generating LSTM model.
+
+        Args:
+            vocabulary (Vocabulary): An object containing all tokens available to generate SMILES with.
+            embed_size (int): Size of the embedding space.
+            hidden_size (int): Number of nodes in the hidden layers.
+            lr (float): Learning rate for training, 1e-3 by default.
+        """
+        super().__init__()
+        self.voc = vocabulary
         self.embed_size = embed_size
         self.hidden_size = hidden_size
-        self.output_size = voc.size
+        self.output_size = vocabulary.size
+        self.lr = lr
 
-        self.embed = nn.Embedding(voc.size, embed_size)
-        self.is_lstm = is_lstm
-        rnn_layer = nn.LSTM if is_lstm else nn.GRU
-        self.rnn = rnn_layer(embed_size, hidden_size, num_layers=3, batch_first=True)
-        self.linear = nn.Linear(hidden_size, voc.size)
-        self.optim = optim.Adam(self.parameters(), lr=lr)
-        self.to(DEVICE)
+        self.embed = torch.nn.Embedding(vocabulary.size, embed_size, device=self.device)
+        self.rnn = torch.nn.LSTM(
+            embed_size, hidden_size, num_layers=3, batch_first=True, device=self.device
+        )
+        self.linear = torch.nn.Linear(hidden_size, vocabulary.size, device=self.device)
+        self.automatic_optimization = False
 
-    def forward(self, input, h):
-        output = self.embed(input.unsqueeze(-1))
+    def forward(self, x, h):
+        output = self.embed(x.unsqueeze(-1))
         output, h_out = self.rnn(output, h)
         output = self.linear(output).squeeze(1)
         return output, h_out
 
-    def init_h(self, batch_size, labels=None):
-        h = torch.rand(3, batch_size, 512).to(DEVICE)
-        if labels is not None:
-            h[0, batch_size, 0] = labels
-        if self.is_lstm:
-            c = torch.rand(3, batch_size, self.hidden_size).to(DEVICE)
-        return (h, c) if self.is_lstm else h
+    def init_h(self, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Initializes a hidden state for the LSTM
+        Args:
+            batch_size (int): batch size to use for the hidden state.
 
-    def likelihood(self, target):
+        Returns:
+            A hidden state tuple
+        """
+        h = torch.rand(3, batch_size, 512, device=self.device)
+        c = torch.rand(3, batch_size, self.hidden_size, device=self.device)
+        return h, c
+
+    def likelihood(self, target: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the likelihood of the next token in the sequence for a batch of molecules
+        Args:
+            target (torch.Tensor): A tensor containing the size of the batch to use and the associated sequence length
+
+        Returns:
+            A tensor containing likelihood scores for all molecules in the batch
+        """
         batch_size, seq_len = target.size()
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
+        x = torch.tensor(
+            [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
+        )
         h = self.init_h(batch_size)
-        scores = torch.zeros(batch_size, seq_len).to(DEVICE)
+        scores = torch.zeros(batch_size, seq_len, device=self.device)
         for step in range(seq_len):
             logits, h = self(x, h)
             logits = logits.log_softmax(dim=-1)
@@ -52,79 +81,58 @@ class Generator(nn.Module):
             x = target[:, step]
         return scores
 
-    def PGLoss(self, loader):
-        for seq, reward in loader:
+    def policy_gradient_loss(self, loader: DataLoader) -> None:
+        """ """
+        for sequence, reward in loader:
             self.zero_grad()
-            score = self.likelihood(seq)
+            score = self.likelihood(sequence)
             loss = score * reward
             loss = -loss.mean()
-            loss.backward()
-            self.optim.step()
+            self.manual_backward(loss)
+            self.opt.step()
 
     def sample(self, batch_size):
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
+        """ """
+        x = torch.tensor(
+            [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
+        )
         h = self.init_h(batch_size)
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
-        isEnd = torch.zeros(batch_size).bool().to(DEVICE)
+        sequences = torch.zeros(batch_size, self.voc.max_len, device=self.device).long()
+        is_end = torch.zeros(batch_size, device=self.device).bool()
 
         for step in range(self.voc.max_len):
             logit, h = self(x, h)
             proba = logit.softmax(dim=-1)
             x = torch.multinomial(proba, 1).view(-1)
-            x[isEnd] = self.voc.tk2ix["EOS"]
+            x[is_end] = self.voc.tk2ix["EOS"]
             sequences[:, step] = x
 
             end_token = x == self.voc.tk2ix["EOS"]
-            isEnd = torch.ge(isEnd + end_token, 1)
-            if (isEnd == 1).all():
+            is_end = torch.ge(is_end + end_token, 1)
+            if (is_end == 1).all():
                 break
         return sequences
 
-    def evolve(self, batch_size, epsilon=0.01, crover=None, mutate=None):
+    def evolve(
+        self,
+        batch_size: int,
+        epsilon: float = 0.01,
+        crover: Optional["Generator"] = None,
+        mutate: Optional["Generator"] = None,
+    ):
+        """ """
         # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
-        # Hidden states initialization for exploitation network
-        h = self.init_h(batch_size)
-        # Hidden states initialization for exploration network
-        h1 = self.init_h(batch_size)
-        h2 = self.init_h(batch_size)
-        # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
-        # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool().to(DEVICE)
-
-        for step in range(self.voc.max_len):
-            logit, h = self(x, h)
-            proba = logit.softmax(dim=-1)
-            if crover is not None:
-                ratio = torch.rand(batch_size, 1).to(DEVICE)
-                logit1, h1 = crover(x, h1)
-                proba = proba * ratio + logit1.softmax(dim=-1) * (1 - ratio)
-            if mutate is not None:
-                logit2, h2 = mutate(x, h2)
-                is_mutate = (torch.rand(batch_size) < epsilon).to(DEVICE)
-                proba[is_mutate, :] = logit2.softmax(dim=-1)[is_mutate, :]
-            # sampling based on output probability distribution
-            x = torch.multinomial(proba, 1).view(-1)
-
-            is_end |= x == self.voc.tk2ix["EOS"]
-            x[is_end] = self.voc.tk2ix["EOS"]
-            sequences[:, step] = x
-            if is_end.all():
-                break
-        return sequences
-
-    def evolve1(self, batch_size, epsilon=0.01, crover=None, mutate=None):
-        # Start tokens
-        x = torch.LongTensor([self.voc.tk2ix["GO"]] * batch_size).to(DEVICE)
+        x = torch.tensor(
+            [self.voc.tk2ix["GO"]] * batch_size, dtype=torch.long, device=self.device
+        )
         # Hidden states initialization for exploitation network
         h = self.init_h(batch_size)
         # Hidden states initialization for exploration network
         h2 = self.init_h(batch_size)
         # Initialization of output matrix
-        sequences = torch.zeros(batch_size, self.voc.max_len).long().to(DEVICE)
+        sequences = torch.zeros(batch_size, self.voc.max_len, device=self.device).long()
         # labels to judge and record which sample is ended
-        is_end = torch.zeros(batch_size).bool().to(DEVICE)
+        is_end = torch.zeros(batch_size, device=self.device).bool()
 
         for step in range(self.voc.max_len):
             is_change = torch.rand(1) < 0.5
@@ -135,7 +143,7 @@ class Generator(nn.Module):
             proba = logit.softmax(dim=-1)
             if mutate is not None:
                 logit2, h2 = mutate(x, h2)
-                ratio = torch.rand(batch_size, 1).to(DEVICE) * epsilon
+                ratio = torch.rand(batch_size, 1, device=self.device) * epsilon
                 proba = (
                     logit.softmax(dim=-1) * (1 - ratio) + logit2.softmax(dim=-1) * ratio
                 )
@@ -153,47 +161,30 @@ class Generator(nn.Module):
                 break
         return sequences
 
-    def fit(
-        self, loader_train, out: pathlib.Path, loader_valid=None, epochs=100, lr=1e-3
-    ):
-        optimizer = optim.Adam(self.parameters(), lr=lr)
-        log = open(out.with_suffix(".log"), "w")
-        best_error = np.inf
-        for epoch in range(epochs):
-            for i, batch in enumerate(loader_train):
-                optimizer.zero_grad()
-                loss_train = self.likelihood(batch.to(DEVICE))
-                loss_train = -loss_train.mean()
-                loss_train.backward()
-                optimizer.step()
-                if i % 10 == 0 or loader_valid is not None:
-                    seqs = self.sample(len(batch * 2))
-                    ix = tensor_ops.unique(seqs)
-                    seqs = seqs[ix]
-                    smiles, valids = self.voc.check_smiles(seqs)
-                    error = 1 - sum(valids) / len(seqs)
-                    info = "Epoch: %d step: %d error_rate: %.3f loss_train: %.3f" % (
-                        epoch,
-                        i,
-                        error,
-                        loss_train.item(),
-                    )
-                    if loader_valid is not None:
-                        loss_valid, size = 0, 0
-                        for j, batch in enumerate(loader_valid):
-                            size += batch.size(0)
-                            loss_valid += (
-                                -self.likelihood(batch.to(DEVICE)).sum().item()
-                            )
-                        loss_valid = loss_valid / size / self.voc.max_len
-                        if loss_valid < best_error:
-                            torch.save(self.state_dict(), out.with_suffix(".pkg"))
-                            best_error = loss_valid
-                        info += " loss_valid: %.3f" % loss_valid
-                    elif error < best_error:
-                        torch.save(self.state_dict(), out.with_suffix(".pkg"))
-                        best_error = error
-                    print(info, file=log)
-                    for i, smile in enumerate(smiles):
-                        print("%d\t%s" % (valids[i], smile), file=log)
-        log.close()
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        return optimizer
+
+    def training_step(self, batch, batch_idx):
+        opt = self.optimizers()
+        opt.zero_grad()
+        loss = self.likelihood(batch)
+        loss = -loss.mean()
+        self.manual_backward(loss)
+        opt.step()
+        self.log("train_loss", loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        loss = self.likelihood(batch)
+        loss = -loss.mean()
+        self.log("val_loss", loss)
+        return loss
+
+    def on_validation_epoch_end(self) -> None:
+        sequences = self.sample(1024)  # batch size (512 by default) times 2
+        indices = tensor_ops.unique(sequences)
+        sequences = sequences[indices]
+        smiles, valids = self.voc.check_smiles(sequences)
+        frac_valid = sum(valids) / len(sequences)
+        self.log("frac_valid_smiles", frac_valid)

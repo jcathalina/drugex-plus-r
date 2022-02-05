@@ -1,30 +1,29 @@
-#
-# calculation of synthetic accessibility score as described in:
-#
-# Estimation of Synthetic Accessibility Score of Drug-like Molecules based on Molecular Complexity and Fragment Contributions
-# Peter Ertl and Ansgar Schuffenhauer
-# Journal of Cheminformatics 1:8 (2009)
-# http://www.jcheminf.com/content/1/1/8
-#
-# several small modifications to the original paper are included
-# particularly slightly different formula for macrocyclic penalty
-# and taking into account also molecule symmetry (fingerprint density)
-#
-# for a set of 10k diverse molecules the agreement between the original method
-# as implemented in PipelinePilot and this implementation is r2 = 0.97
-#
-# Peter Ertl & Greg Landrum, september 2013
-#
+"""
+calculation of synthetic accessibility score as described in:
 
+Estimation of Synthetic Accessibility Score of Drug-like Molecules based on Molecular Complexity and Fragment Contributions
+Peter Ertl and Ansgar Schuffenhauer
+Journal of Cheminformatics 1:8 (2009)
+http://www.jcheminf.com/content/1/1/8
+
+several small modifications to the original paper are included
+particularly slightly different formula for macrocyclic penalty
+and taking into account also molecule symmetry (fingerprint density)
+
+for a set of 10k diverse molecules the agreement between the original method
+as implemented in PipelinePilot and this implementation is r2 = 0.97
+
+Peter Ertl & Greg Landrum, september 2013
+"""
 
 import gzip
 import math
 import os.path as op
 import pickle
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 from rdkit import Chem
-from rdkit.Chem import rdMolDescriptors
+from rdkit.Chem import rdchem, rdMolDescriptors
 
 _fscores: Optional[Dict] = None
 
@@ -43,20 +42,18 @@ def read_fragment_scores(name: str = "fpscores") -> None:
     _fscores = out_dict
 
 
-def num_bridgeheads_and_spiro(mol, ri=None):
+def num_bridgeheads_and_spiro(mol: rdchem.Mol) -> Tuple[int, int]:
     n_spiro = rdMolDescriptors.CalcNumSpiroAtoms(mol)
     n_bridgehead = rdMolDescriptors.CalcNumBridgeheadAtoms(mol)
     return n_bridgehead, n_spiro
 
 
-def calculate_score(m):
+def calculate_score(mol: rdchem.Mol, circ_fp_radius: int = 2) -> float:
     if _fscores is None:
         read_fragment_scores()
 
     # fragment score
-    fp = rdMolDescriptors.GetMorganFingerprint(
-        m, 2
-    )  # <- 2 is the *radius* of the circular fingerprint
+    fp = rdMolDescriptors.GetMorganFingerprint(mol=mol, radius=circ_fp_radius)
     fps = fp.GetNonzeroElements()
     score1 = 0.0
     nf = 0
@@ -67,12 +64,13 @@ def calculate_score(m):
     score1 /= nf
 
     # features score
-    n_atoms = m.GetNumAtoms()
-    n_chiral_centers = len(Chem.FindMolChiralCenters(m, includeUnassigned=True))
-    ri = m.GetRingInfo()
-    n_bridgeheads, n_spiro = num_bridgeheads_and_spiro(m, ri)
+    n_atoms = mol.GetNumAtoms()
+    n_chiral_centers = len(Chem.FindMolChiralCenters(mol=mol, includeUnassigned=True))
+    ring_info = mol.GetRingInfo()
+    n_bridgeheads, n_spiro = num_bridgeheads_and_spiro(mol=mol)
+
     n_macrocycles = 0
-    for x in ri.AtomRings():
+    for x in ring_info.AtomRings():
         if len(x) > 8:
             n_macrocycles += 1
 
@@ -83,7 +81,7 @@ def calculate_score(m):
     macrocycle_penalty = 0.0
     # ---------------------------------------
     # This differs from the paper, which defines:
-    #  macrocyclePenalty = math.log10(n_macrocycles+1)
+    # macrocyclePenalty = math.log10(n_macrocycles+1)
     # This form generates better results when 2 or more macrocycles are present
     if n_macrocycles > 0:
         macrocycle_penalty = math.log10(2)
@@ -121,13 +119,13 @@ def calculate_score(m):
     return sa_score
 
 
-def process_mols(mols):
+def process_mols(mols: List[rdchem.Mol]) -> None:
     print("smiles\tName\tsa_score")
-    for i, m in enumerate(mols):
-        if m is None:
+    for mol in mols:
+        if mol is None:
             continue
 
-        s = calculate_score(m)
+        score = calculate_score(mol=mol)
 
-        smiles = Chem.MolToSmiles(m)
-        print(smiles + "\t" + m.GetProp("_Name") + "\t%3f" % s)
+        smiles = Chem.MolToSmiles(mol=mol)
+        print(smiles + "\t" + mol.GetProp("_Name") + "\t%3f" % score)

@@ -1,0 +1,5 @@
+outs:
+- md5: 64e1fc8bac1ab6103b89d6715799d609.dir
+  size: 64321776
+  nfiles: 29
+  path: rascore

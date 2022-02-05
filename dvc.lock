@@ -1,0 +1,41 @@
+schema: '2.0'
+stages:
+  featurization:
+    cmd: python src/drugexr/features/featurization.py
+    deps:
+    - path: data/raw/chembl_26.sdf.gz
+      md5: 8156f2eed8d99a2da750f912eabb341e
+      size: 614155582
+    - path: data/raw/ligand_raw.tsv
+      md5: 7e6bcb0bbfd8b250d41330038576caf4
+      size: 40763001
+    - path: src/drugexr/features/featurization.py
+      md5: 34cc258d81961dc13cdc0d5332af82e8
+      size: 4538
+    outs:
+    - path: data/processed/chembl_corpus.txt
+      md5: 51292d207035bb4bc8462f609a99455a
+      size: 245669612
+    - path: data/processed/chembl_voc.txt
+      md5: afe796dc6e011113442de00c075594cb
+      size: 428
+    - path: data/processed/ligand_corpus.txt
+      md5: 0e23a49f41a854a5d86ab71758ce433e
+      size: 4156288
+    - path: data/processed/ligand_voc.txt
+      md5: 7bc1254858a057cc21e5cc19f6f78fcf
+      size: 162
+  environment:
+    cmd: python src/drugexr/training/train_env.py
+    deps:
+    - path: data/raw/ligand_raw.tsv
+      md5: 7e6bcb0bbfd8b250d41330038576caf4
+      size: 40763001
+    - path: src/drugexr/training/train_env.py
+      md5: 77a39a85b067668ba346df7322c26c9f
+      size: 7083
+    outs:
+    - path: models/output/single
+      md5: 77914260215d2a18062b164f9ba69bf5.dir
+      size: 314675889
+      nfiles: 9

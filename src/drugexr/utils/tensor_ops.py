@@ -3,11 +3,12 @@ from typing import List
 import numpy as np
 import rdkit.Chem
 import torch
+from torch.utils.data.dataset import Dataset, random_split
 
-from src.drugexr.data.preprocess import logger
-
-
+from drugexr.features.featurization import logger
 # TODO: Export to test module and put large objects into files
+from drugexr.models.predictor import Predictor
+
 SAMPLE_SMILES = [
     "CC(C)(N)CP(=O)(O)CCCCc1ccc(C#Cc2ccccc2F)cc1",
     "c1ccc2c(CC3CNCCC3O)cccc2c1",
@@ -138,6 +139,31 @@ def canonicalize_smiles_list(smiles: List[str]) -> List[str]:
     return canon_smiles
 
 
+def random_split_frac(dataset: Dataset, train_frac: float = 0.9, val_frac: float = 0.1):
+    """
+    Helper wrapper function around PyTorch's random_split method that allows you to pass
+    fractions instead of integers.
+    """
+    if train_frac + val_frac != 1:
+        raise ValueError("The fractions have to add up to 1.")
+
+    dataset_size = len(dataset)
+
+    len_1 = int(np.floor(train_frac * dataset_size))
+    len_2 = dataset_size - len_1
+    return random_split(dataset=dataset, lengths=[len_1, len_2])
+
+
+def print_auto_logged_info(r):
+    tags = {k: v for k, v in r.data.tags.items() if not k.startswith("mlflow.")}
+    # artifacts = [f.path for f in MlflowClient().list_artifacts(r.info.run_id, "model")]
+    print("run_id: {}".format(r.info.run_id))
+    # print("artifacts: {}".format(artifacts))
+    print("params: {}".format(r.data.params))
+    print("metrics: {}".format(r.data.metrics))
+    print("tags: {}".format(tags))
+
+
 def test_canonicalize_smiles_list():
     x = canonicalize_smiles_list(SAMPLE_SMILES)
     print(x)
@@ -148,6 +174,11 @@ def test_unique():
     unique_indices = unique(arr=sample_smiles_arr)
     x = sample_smiles_arr[unique_indices]
     print(x.shape)
+
+
+def test_predictor_calcs():
+    x = Predictor.calc_physchem(mols=[])
+    print(x)
 
 
 if __name__ == "__main__":

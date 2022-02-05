@@ -1,30 +1,38 @@
+from typing import List, Optional
+
 import numpy as np
 import pandas as pd
 from rdkit import Chem
 
-from src.drugexr.models.predictor import Predictor
-from src.drugexr.utils.fingerprints import get_fingerprint
-from src.drugexr.utils.sorting import nsgaii_sort, similarity_sort
+from drugexr.models.predictor import Predictor
+from drugexr.utils.fingerprints import get_fingerprint
+from drugexr.utils.sorting import nsgaii_sort, similarity_sort
 
 
 class Environment:
-    def __init__(self, objs, mods, keys, ths=None):
+    def __init__(self,
+                 objs: List,
+                 mods: List,
+                 keys: List[str],
+                 ths: Optional[List[float]] = None):
         """
         Initialized methods for the construction of environment.
         Args:
-            objs (List[Ojective]): a list of objectives.
-            mods (List[Modifier]): a list of modifiers, and its length
+            objs (List[Any]): a list of objectives.
+            mods (List[Any]): a list of modifiers, and its length
                 equals the size of objs.
             keys (List[str]): a list of strings as the names of objectives,
                 and its length equals the size of objs.
-            ths (List): a list of float value, and ts length equals the size of objs.
+            ths (Optional[List[float]]): a list of float value, and ts length equals the size of objs.
         """
         self.objs = objs
         self.mods = mods
         self.ths = ths if ths is not None else [0.99] * len(keys)
         self.keys = keys
 
-    def __call__(self, mols=None, is_smiles=False, is_modified=True):
+    def __call__(
+        self, mols: List[str] = None, is_smiles: bool = False, is_modified: bool = True
+    ):
         """
         Calculate the scores of all objectives for all of samples
         Args:
@@ -68,11 +76,11 @@ class Environment:
                 fps.append(None)
         return fps
 
-    def calc_reward(self, smiles, scheme="WS"):
+    def calc_reward(self, smiles: List[str], scheme: str = "WS"):
         """
         Calculate the single value as the reward for each molecule used for reinforcement learning
         Args:
-            smiles (List):  a list of SMILES-based molecules
+            smiles (List[str]):  a list of SMILES-based molecules
             scheme (str): the label of different rewarding schemes, including
                 'WS': weighted sum, 'PR': Pareto ranking with Tanimoto distance,
                 and 'CD': Pareto ranking with crowding distance.
@@ -98,10 +106,13 @@ class Environment:
             rewards = np.zeros((len(smiles), 1))
             ranks = nsgaii_sort(preds, is_gpu=True)
             rewards[ranks, 0] = np.arange(len(preds)) / len(preds)
-        else:
+        elif scheme == "WS":
             weight = ((preds < self.ths).mean(axis=0, keepdims=True) + 0.01) / (
                 (preds >= self.ths).mean(axis=0, keepdims=True) + 0.01
             )
             weight = weight / weight.sum()
             rewards = preds.dot(weight.T)
+        else:
+            raise ValueError(f"Selected weight scheme {scheme} does not exist.")
+
         return rewards

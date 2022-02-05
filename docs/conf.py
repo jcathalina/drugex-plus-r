@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "DrugEx MINUS"
+project = "DrugEx+R"
 copyright = "2021, Julius Cathalina"
 author = "Julius Cathalina"
 
